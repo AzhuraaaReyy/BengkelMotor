@@ -1,5 +1,5 @@
 import client from "./client";
-import type { ApiResponse, Paginated, Sale, SaleItem } from "@/types";
+import type { ApiResponse, Sale, SaleItem } from "@/types";
 
 export interface CartLineInput {
   item_type: "PRODUCT" | "SERVICE";
@@ -21,11 +21,25 @@ export interface CheckoutPayload {
   discount_amount: number;
 }
 
-export async function getSalesApi(params?: Record<string, unknown>) {
-  const { data } = await client.get<ApiResponse<Paginated<Sale>>>("/sales", {
-    params,
-  });
-  return data.data;
+export interface SalesListResponse {
+  data: Sale[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+export async function getSalesApi(params?: Record<string, unknown>): Promise<SalesListResponse> {
+  const { data } = await client.get("/sales", { params });
+  // Laravel 12 returns nested meta structure, flatten it
+  const raw = data.data;
+  return {
+    data: raw.data,
+    current_page: raw.meta?.current_page ?? raw.current_page,
+    last_page: raw.meta?.last_page ?? raw.last_page,
+    per_page: raw.meta?.per_page ?? raw.per_page,
+    total: raw.meta?.total ?? raw.total,
+  };
 }
 
 export async function createSaleApi(payload: CreateSalePayload): Promise<Sale> {
