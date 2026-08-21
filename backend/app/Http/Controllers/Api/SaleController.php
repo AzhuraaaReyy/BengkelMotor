@@ -23,7 +23,7 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
-        $sales = Sale::with(['cashier:id,name', 'customer:id,name'])
+        $sales = Sale::with(['cashier:id,name', 'customer:id,name', 'latestCharge'])
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->when($request->search, function ($q, $s) {
                 $sanitized = str_replace(['%', '_'], ['\\%', '\\_'], $s);
