@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -31,7 +31,6 @@ import {
   Pencil,
   User,
   Calendar,
-  ArrowRight,
   CheckCircle2,
   Trash2,
 } from "lucide-react";
@@ -51,6 +50,7 @@ function normalizePhone(value: string): string {
 
 export function ServiceOrdersPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [data, setData] = useState<ServiceOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -188,15 +188,16 @@ export function ServiceOrdersPage() {
         });
         customerId = created.id;
       }
-      await createServiceOrderApi({
+      const order = await createServiceOrderApi({
         customer_id: customerId,
         motorcycle_type: type.trim() || undefined,
         complaint: form.complaint,
         diagnosis_note: form.diagnosis_note || undefined,
       });
-      toast.success("Order servis dibuat.");
+      toast.success("Order servis dibuat. Mengarahkan ke kasir...");
       setFormOpen(false);
-      load();
+      // Auto-redirect to POS with service order
+      navigate(`/pos?service_order=${order.id}`, { replace: true });
     } catch (e) {
       const err = e as { message?: string };
       toast.error(err.message || "Gagal menyimpan.");
@@ -328,15 +329,6 @@ export function ServiceOrdersPage() {
           >
             <Trash2 className="h-4 w-4" />
           </button>
-          {!r.sale && r.status !== "CANCELLED" && r.status !== "DONE" && (
-            <Link
-              to={`/pos?service_order=${r.id}`}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover"
-            >
-              <span>Transaksi</span>
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          )}
         </div>
       ),
     },
@@ -475,15 +467,6 @@ export function ServiceOrdersPage() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                  {!r.sale && r.status !== "CANCELLED" && r.status !== "DONE" && (
-                    <Link
-                      to={`/pos?service_order=${r.id}`}
-                      className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-control bg-primary px-4 py-2 text-xs font-medium text-white hover:bg-primary-hover"
-                    >
-                      <span>Buat Transaksi</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
                 </div>
               </div>
             ))}
