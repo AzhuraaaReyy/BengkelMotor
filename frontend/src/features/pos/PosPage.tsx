@@ -9,11 +9,13 @@ import { WaitingPaymentModal } from "@/features/pos/WaitingPaymentModal";
 import { useToast } from "@/components/ui/Toast";
 import { getProductsApi } from "@/lib/api/products";
 import { getServicesApi } from "@/lib/api/services";
+import { getCustomersApi } from "@/lib/api/customers";
 import { checkoutSaleApi, createSaleApi } from "@/lib/api/sales";
 import { formatRupiah, formatNumber } from "@/lib/formatters";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
-import type { Product, Service } from "@/types";
+import { CustomerSelector } from "@/features/pos/CustomerSelector";
+import type { Product, Service, Customer } from "@/types";
 import { Search, ShoppingCart, ArrowRight } from "lucide-react";
 
 interface CartLine {
@@ -30,6 +32,7 @@ export function PosPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -48,6 +51,7 @@ export function PosPage() {
     ReturnType<typeof checkoutSaleApi>
   > | null>(null);
   const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
   // Explicitly detach the current cart from a linked service order, keeping
   // whatever items are already in the cart — used by the "Lepas tautan"
@@ -110,12 +114,14 @@ export function PosPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [pd, sv] = await Promise.all([
+      const [pd, sv, cu] = await Promise.all([
         getProductsApi({ per_page: 200, all: 1 }),
         getServicesApi({ per_page: 200, all: 1 }),
+        getCustomersApi({ per_page: 200 }),
       ]);
       setProducts(pd.data);
       setServices(sv.data);
+      setCustomers(cu.data);
     } catch (e) {
       const err = e as { message?: string };
       setLoadError(err.message || "Gagal memuat katalog.");
@@ -224,6 +230,7 @@ export function PosPage() {
     setCheckoutLoading(true);
     try {
       const sale = await createSaleApi({
+        customer_id: selectedCustomerId ?? undefined,
         service_order_id: serviceOrderId ? Number(serviceOrderId) : undefined,
         discount_amount: safeDiscount,
         items: cart.map((l) =>
@@ -724,6 +731,17 @@ export function PosPage() {
               {formatRupiah(grandTotal)}
             </p>
           </div>
+          {!serviceOrderId && (
+            <CustomerSelector
+              customers={customers}
+              selectedId={selectedCustomerId}
+              onSelect={setSelectedCustomerId}
+              onCustomerCreated={(c) => {
+                setCustomers((prev) => [...prev, c]);
+                setSelectedCustomerId(c.id);
+              }}
+            />
+          )}
           <PaymentMethodSelector value={paymentMethod} onChange={(m) => setPaymentMethod(m as keyof typeof PAYMENT_METHODS)} />
           {!isOnlinePayment && (
             <>
