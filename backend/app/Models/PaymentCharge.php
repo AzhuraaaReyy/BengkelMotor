@@ -15,7 +15,20 @@ class PaymentCharge extends Model
     public const STATUS_EXPIRED = 'EXPIRED';
     public const STATUS_FAILED = 'FAILED';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'sale_id',
+        'method',
+        'amount',
+        'status',
+        'gateway_transaction_id',
+        'gateway_type',
+        'va_number',
+        'qr_url',
+        'qr_string',
+        'deeplink',
+        'expires_at',
+        'paid_at',
+    ];
 
     protected $casts = [
         'amount' => 'decimal:2',

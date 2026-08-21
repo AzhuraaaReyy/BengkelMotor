@@ -25,8 +25,9 @@ class ProductController extends Controller
         $query = Product::query();
 
         if ($request->search) {
-            $query->where(fn($q) => $q->where('name', 'like', "%{$request->search}%")
-                ->orWhere('sku', 'like', "%{$request->search}%"));
+            $sanitized = str_replace(['%', '_'], ['\\%', '\\_'], $request->search);
+            $query->where(fn($q) => $q->where('name', 'like', "%{$sanitized}%")
+                ->orWhere('sku', 'like', "%{$sanitized}%"));
         }
 
         if ($request->has('is_active')) {

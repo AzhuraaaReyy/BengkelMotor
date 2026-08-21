@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+frontend/dist/
+backend/public/build/
+backend/public/hot
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+.phpactor.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Cache
+.phpunit.result.cache
+.phpunit.cache/
+backend/storage/framework/cache/data/*
+!backend/storage/framework/cache/data/.gitignore
+
+# Backend storage
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/storage/pail
+backend/storage/*.key

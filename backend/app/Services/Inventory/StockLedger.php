@@ -19,7 +19,9 @@ class StockLedger
 
         foreach ($productItems as $item) {
             $product = $locked->get($item->product_id);
-            if (!$product) continue;
+            if (!$product) {
+                throw new RuntimeException("Product ID {$item->product_id} not found during stock operation.", 404);
+            }
 
             $before = $product->current_stock;
             $after = bcsub((string) $before, (string) $item->quantity, 0);
@@ -51,7 +53,9 @@ class StockLedger
 
         foreach ($productItems as $item) {
             $product = $locked->get($item->product_id);
-            if (!$product) continue;
+            if (!$product) {
+                throw new RuntimeException("Product ID {$item->product_id} not found during stock operation.", 404);
+            }
 
             $before = $product->current_stock;
             $after = bcadd((string) $before, (string) $item->quantity, 0);

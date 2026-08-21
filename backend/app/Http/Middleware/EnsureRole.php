@@ -18,6 +18,10 @@ class EnsureRole
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        if (!$user->is_active) {
+            return response()->json(['message' => 'Account is deactivated.'], 403);
+        }
+
         if (!in_array($user->role, $roles, true)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }

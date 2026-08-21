@@ -61,7 +61,9 @@ export function DataTable<T>({
                   <td key={c.key} className={`px-4 py-3 ${c.className ?? ""}`}>
                     {c.render
                       ? c.render(row)
-                      : (row as Record<string, ReactNode>)[c.key]}
+                      : typeof (row as Record<string, unknown>)[c.key] === "string" || typeof (row as Record<string, unknown>)[c.key] === "number"
+                        ? String((row as Record<string, unknown>)[c.key])
+                        : null}
                   </td>
                 ))}
               </tr>

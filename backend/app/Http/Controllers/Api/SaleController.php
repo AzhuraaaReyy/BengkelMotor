@@ -26,7 +26,8 @@ class SaleController extends Controller
         $sales = Sale::with(['cashier:id,name', 'customer:id,name'])
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->when($request->search, function ($q, $s) {
-                $q->where('sale_code', 'like', "%{$s}%");
+                $sanitized = str_replace(['%', '_'], ['\\%', '\\_'], $s);
+                $q->where('sale_code', 'like', "%{$sanitized}%");
             })
             ->orderByDesc('created_at')
             ->paginate(15)

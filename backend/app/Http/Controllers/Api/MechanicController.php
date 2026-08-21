@@ -12,7 +12,7 @@ class MechanicController extends Controller
     {
         $mechanics = Mechanic::query()
             ->when($request->boolean('active_only'), fn($q) => $q->where('is_active', true))
-            ->when($request->search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
+            ->when($request->search, fn($q, $s) => $q->where('name', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $s) . '%'))
             ->orderBy('name')
             ->paginate(15);
 

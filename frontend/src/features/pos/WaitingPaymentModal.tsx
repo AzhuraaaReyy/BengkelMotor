@@ -112,7 +112,7 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
         {sale.payment_method === "GOPAY" && (
           <div className="flex flex-col items-center gap-2">
             {sale.gateway_deeplink && (
-              <a href={sale.gateway_deeplink} className="text-primary underline">Buka GoPay</a>
+              <a href={sale.gateway_deeplink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Buka GoPay</a>
             )}
             <p className="text-sm text-gray-500">Bayar lewat GoPay</p>
           </div>
