@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -9,7 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { getProductsApi } from "@/lib/api/products";
 import { getServicesApi } from "@/lib/api/services";
 import { getCustomersApi } from "@/lib/api/customers";
-import { checkoutSaleApi, createSaleApi } from "@/lib/api/sales";
+import { checkoutSaleApi, createSaleApi, getSaleApi } from "@/lib/api/sales";
 import { formatRupiah, formatNumber } from "@/lib/formatters";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
@@ -26,6 +27,7 @@ interface CartLine {
 
 export function PosPage() {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -79,6 +81,28 @@ export function PosPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const resumeId = searchParams.get("resume_payment");
+    if (!resumeId) return;
+
+    const resumeSale = async () => {
+      try {
+        const sale = await getSaleApi(Number(resumeId));
+        if (sale.status === "PENDING") {
+          setWaitingPaymentSale(sale);
+        } else {
+          toast.error("Transaksi sudah tidak aktif.");
+        }
+      } catch {
+        toast.error("Gagal memuat transaksi.");
+      } finally {
+        setSearchParams({}, { replace: true });
+      }
+    };
+
+    resumeSale();
+  }, [searchParams, setSearchParams]);
 
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "SERVICE") return [];
@@ -170,7 +194,7 @@ export function PosPage() {
     setCheckoutOpen(true);
   };
 
-  const isOnlinePayment = ["QRIS", "VA", "GOPAY"].includes(paymentMethod);
+  const isOnlinePayment = ["QRIS", "VA"].includes(paymentMethod);
 
   const doCheckout = async () => {
     const svc = serviceDataRef.current;
