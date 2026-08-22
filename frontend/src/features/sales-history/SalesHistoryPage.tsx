@@ -18,6 +18,7 @@ import { useAuth } from "@/app/auth/AuthContext";
 import { getSalesApi, getSaleApi, voidSaleApi } from "@/lib/api/sales";
 import { formatRupiah, formatDateTime, formatNumber } from "@/lib/formatters";
 import { SALE_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/constants";
+import { ReceiptView } from "@/features/pos/ReceiptView";
 import type { Sale } from "@/types";
 
 export function SalesHistoryPage() {
@@ -41,6 +42,7 @@ export function SalesHistoryPage() {
   const [voidTarget, setVoidTarget] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [voidLoading, setVoidLoading] = useState(false);
+  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -162,6 +164,11 @@ export function SalesHistoryPage() {
               Lanjutkan Pembayaran
             </Button>
           )}
+          {r.status === "PAID" && (
+            <Button variant="ghost" size="sm" onClick={() => setReceiptSale(r)}>
+              Cetak Struk
+            </Button>
+          )}
           {isAdmin && r.status === "PAID" && (
             <Button variant="danger" size="sm" onClick={() => openVoid(r)}>
               Void
@@ -264,12 +271,13 @@ export function SalesHistoryPage() {
                         Lanjutkan
                       </Button>
                     )}
+                    {s.status === "PAID" && (
+                      <Button variant="ghost" size="sm" onClick={() => setReceiptSale(s)}>
+                        Cetak
+                      </Button>
+                    )}
                     {isAdmin && s.status === "PAID" && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => openVoid(s)}
-                      >
+                      <Button variant="danger" size="sm" onClick={() => openVoid(s)}>
                         Void
                       </Button>
                     )}
@@ -377,11 +385,16 @@ export function SalesHistoryPage() {
               </div>
             </div>
 
-            {isAdmin && detail.status === "PAID" && (
-              <div className="flex justify-end">
-                <Button variant="danger" onClick={() => openVoid(detail)}>
-                  Void Transaksi
+            {detail.status === "PAID" && (
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setReceiptSale(detail)}>
+                  Cetak Struk
                 </Button>
+                {isAdmin && (
+                  <Button variant="danger" onClick={() => openVoid(detail)}>
+                    Void Transaksi
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -407,6 +420,21 @@ export function SalesHistoryPage() {
           />
         }
       />
+
+      <Modal
+        open={!!receiptSale}
+        onClose={() => setReceiptSale(null)}
+        title="Struk Pembayaran"
+        size="lg"
+      >
+        {receiptSale && (
+          <ReceiptView
+            sale={receiptSale}
+            onClose={() => setReceiptSale(null)}
+            customerName={receiptSale.customer?.name ?? ""}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
