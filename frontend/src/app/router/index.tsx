@@ -1,4 +1,5 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "@/app/auth/AuthContext";
 import type { ReactNode } from "react";
 import type { Role } from "@/types";
@@ -16,9 +17,16 @@ import { UsersPage } from "@/features/users/UsersPage";
 import { AuditPage } from "@/features/audit/AuditPage";
 import { LoadingState } from "@/components/ui/LoadingState";
 
-// Route guard components (UX only — backend is source of truth).
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login", { replace: true });
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -26,7 +34,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return null;
   return <>{children}</>;
 }
 
@@ -38,6 +46,17 @@ function RequireRole({
   children: ReactNode;
 }) {
   const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      navigate("/login", { replace: true });
+    } else if (!roles.includes(user.role)) {
+      navigate("/pos", { replace: true });
+    }
+  }, [isLoading, user, roles, navigate]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -45,8 +64,7 @@ function RequireRole({
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" replace />;
-  if (!roles.includes(user.role)) return <Navigate to="/pos" replace />;
+  if (!user || !roles.includes(user.role)) return null;
   return <>{children}</>;
 }
 
