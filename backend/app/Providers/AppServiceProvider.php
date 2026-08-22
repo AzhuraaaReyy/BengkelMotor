@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Payments\Contracts\PaymentGateway;
+use App\Services\Payments\Gateways\FakePaymentGateway;
+use App\Services\Payments\Gateways\MidtransGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,7 +16,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PaymentGateway::class, function () {
+            $serverKey = config('services.midtrans.server_key');
+            if ($serverKey) {
+                return new MidtransGateway();
+            }
+            return new FakePaymentGateway();
+        });
     }
 
     /**
