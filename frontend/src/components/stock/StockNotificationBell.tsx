@@ -6,34 +6,42 @@ import { formatQuantity } from "@/lib/formatters";
 import type { LowStockCounts, LowStockItem } from "@/types";
 
 // Topbar notification bell for low/out-of-stock products (Fase 3.2).
-// Shows only while there is something to report and clears by itself once
-// stock is restocked. User can dismiss for the current login session.
+// Bell icon always shows if low stock exists. Dropdown toggles on bell click.
 interface Props {
   items: LowStockItem[];
   counts: LowStockCounts;
 }
 
-const SESSION_DISMISS_KEY = "stockDismissSession";
-
 export function StockNotificationBell({ items, counts }: Props) {
+  // Early return BEFORE any hooks - React hooks must be called in same order
+  if (!items?.length) return null;
+
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Check dismiss state from sessionStorage - if dismissed in this session, don't render
-  if (sessionStorage.getItem(SESSION_DISMISS_KEY) === "true") return null;
+  const safeItems = items ?? [];
+  const outItems = safeItems.filter((i) => i.is_out);
+  const lowItems = safeItems.filter((i) => !i.is_out);
+  const total = counts?.total ?? safeItems.length;
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleBellClick = () => {
+    setOpen((v) => !v);
+  };
 
   useEffect(() => {
     if (!open) return;
     const onClickOutside = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        sessionStorage.setItem(SESSION_DISMISS_KEY, "true");
         setOpen(false);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        sessionStorage.setItem(SESSION_DISMISS_KEY, "true");
         setOpen(false);
       }
     };
@@ -45,23 +53,11 @@ export function StockNotificationBell({ items, counts }: Props) {
     };
   }, [open]);
 
-  if (!items?.length) return null;
-
-  const safeItems = items ?? [];
-  const outItems = safeItems.filter((i) => i.is_out);
-  const lowItems = safeItems.filter((i) => !i.is_out);
-  const total = counts?.total ?? safeItems.length;
-
-  const handleClose = () => {
-    sessionStorage.setItem(SESSION_DISMISS_KEY, "true");
-    setOpen(false);
-  };
-
   return (
     <div ref={rootRef} className="relative">
       <button
         className="relative rounded-control p-2 text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleBellClick}
         aria-label={`Notifikasi stok: ${total} produk bermasalah`}
       >
         <BellIcon className="h-5 w-5" />
@@ -78,7 +74,7 @@ export function StockNotificationBell({ items, counts }: Props) {
             <div>
               <p className="font-semibold text-text-primary">Peringatan Stok</p>
               <p className="text-xs text-text-secondary">
-                {`${total} produk di bawah stok aman (stok < 5)`}
+                {`${total} produk di bawah stok aman (stok < min_stock)`}
               </p>
             </div>
             <button
