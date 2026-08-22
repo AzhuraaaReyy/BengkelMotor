@@ -668,6 +668,42 @@ export function PosPage() {
             onServiceDataChange={(data) => { serviceDataRef.current = data; }}
           />
           <PaymentMethodSelector value={paymentMethod} onChange={(m) => setPaymentMethod(m as keyof typeof PAYMENT_METHODS)} />
+
+          {/* Detail Transaksi */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:p-4">
+            <p className="text-xs font-bold text-slate-700 mb-2">Detail Transaksi</p>
+            <div className="space-y-2">
+              {cart.map((item, index) => {
+                const name = item.item_type === "PRODUCT" ? item.product?.name : item.service?.name;
+                const price = item.item_type === "PRODUCT" ? (item.product?.sale_price ?? 0) : (item.service?.sale_price ?? 0);
+                return (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 truncate flex-1 mr-2">
+                      {name} <span className="text-slate-400">&times; {item.quantity}</span>
+                    </span>
+                    <span className="font-bold text-slate-800 tabular-nums">{formatRupiah(price * item.quantity)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Subtotal</span>
+                <span className="font-bold text-slate-800 tabular-nums">{formatRupiah(subtotal)}</span>
+              </div>
+              {safeDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Diskon</span>
+                  <span className="font-bold text-red-500 tabular-nums">-{formatRupiah(safeDiscount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1 border-t border-slate-200">
+                <span className="font-bold text-slate-800">Total</span>
+                <span className="font-bold text-blue-600 tabular-nums">{formatRupiah(grandTotal)}</span>
+              </div>
+            </div>
+          </div>
+
           {!isOnlinePayment && (
             <>
               <Input
