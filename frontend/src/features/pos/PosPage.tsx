@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -49,10 +49,12 @@ export function PosPage() {
   > | null>(null);
   const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-  const [isService, setIsService] = useState(false);
-  const [complaint, setComplaint] = useState("");
-  const [diagnosisNote, setDiagnosisNote] = useState("");
-  const [motorcycleType, setMotorcycleType] = useState("");
+  const serviceDataRef = useRef({ complaint: "", diagnosis_note: "", motorcycle_type: "" });
+
+  const hasServiceItems = useMemo(
+    () => cart.some((l) => l.item_type === "SERVICE"),
+    [cart],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -171,7 +173,8 @@ export function PosPage() {
   const isOnlinePayment = ["QRIS", "VA", "GOPAY"].includes(paymentMethod);
 
   const doCheckout = async () => {
-    if (isService && !complaint.trim()) {
+    const svc = serviceDataRef.current;
+    if (hasServiceItems && !svc.complaint.trim()) {
       toast.error("Keluhan pelanggan wajib diisi untuk transaksi servis.");
       return;
     }
@@ -198,10 +201,10 @@ export function PosPage() {
         payment_method: paymentMethod,
         paid_amount: isOnlinePayment ? undefined : paidAmount,
         discount_amount: safeDiscount,
-        is_service: isService || undefined,
-        complaint: isService ? complaint : undefined,
-        diagnosis_note: isService && diagnosisNote ? diagnosisNote : undefined,
-        motorcycle_type: isService && motorcycleType ? motorcycleType : undefined,
+        is_service: hasServiceItems || undefined,
+        complaint: hasServiceItems ? svc.complaint : undefined,
+        diagnosis_note: hasServiceItems && svc.diagnosis_note ? svc.diagnosis_note : undefined,
+        motorcycle_type: hasServiceItems && svc.motorcycle_type ? svc.motorcycle_type : undefined,
       });
       if (isOnlinePayment) {
         setWaitingPaymentSale(paid);
@@ -228,10 +231,7 @@ export function PosPage() {
     setCart([]);
     setDiscount(0);
     setPaidAmount(0);
-    setIsService(false);
-    setComplaint("");
-    setDiagnosisNote("");
-    setMotorcycleType("");
+    serviceDataRef.current = { complaint: "", diagnosis_note: "", motorcycle_type: "" };
   };
 
   if (waitingPaymentSale) {
@@ -267,14 +267,14 @@ export function PosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-6 p-6 pb-24 md:pb-6">
+    <div className="min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-4 p-4 pb-24 md:-m-6 md:p-6 md:pb-6">
       {/* ---------------- TOP HEADER ---------------- */}
       
 
       {/* ---------------- MAIN CONTENT GRID ---------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
         {/* === KATALOG PRODUK & JASA (KIRI) === */}
-        <div className="md:col-span-7 lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           {/* Header Katalog + Filter Button */}
           <div className="flex items-center justify-between">
             <div>
@@ -357,7 +357,7 @@ export function PosPage() {
                       Sparepart tidak ditemukan.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                       {filteredProducts
                         .filter((p) => p.is_active)
                         .slice(0, 60)
@@ -430,7 +430,7 @@ export function PosPage() {
                       Jasa servis tidak ditemukan.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                       {filteredServices
                         .filter((s) => s.is_active)
                         .map((s) => {
@@ -475,8 +475,8 @@ export function PosPage() {
         </div>
 
         {/* === KERANJANG BELANJA (KANAN) === */}
-        <div id="pos-cart" className="md:col-span-5 lg:col-span-4 scroll-mt-24">
-          <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex flex-col h-full min-h-[580px] justify-between">
+        <div id="pos-cart" className="lg:col-span-4 scroll-mt-24">
+          <div className="bg-white rounded-3xl p-4 lg:p-5 border border-slate-200/80 shadow-xs flex flex-col h-full lg:min-h-[580px] justify-between">
             <div>
               {/* Header Keranjang */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -631,7 +631,7 @@ export function PosPage() {
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         title="Konfirmasi Pembayaran"
-        size="md"
+        size="lg"
         footer={
           <>
             <Button
@@ -656,53 +656,6 @@ export function PosPage() {
               {formatRupiah(grandTotal)}
             </p>
           </div>
-          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={isService}
-              onChange={(e) => setIsService(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div>
-              <p className="text-sm font-bold text-slate-800">Ini Transaksi Servis</p>
-              <p className="text-[11px] text-slate-500">Centang jika pelanggan melakukan servis</p>
-            </div>
-          </label>
-          {isService && (
-            <>
-              <Input
-                label="Tipe Motor"
-                name="motorcycle_type"
-                placeholder="Contoh: Honda Beat, Yamaha Mio"
-                value={motorcycleType}
-                onChange={(e) => setMotorcycleType(e.target.value)}
-              />
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
-                  Keluhan Pelanggan <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={complaint}
-                  onChange={(e) => setComplaint(e.target.value)}
-                  placeholder="Jelaskan keluhan pelanggan..."
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
-                  Catatan Diagnosa <span className="text-slate-400">(opsional)</span>
-                </label>
-                <textarea
-                  value={diagnosisNote}
-                  onChange={(e) => setDiagnosisNote(e.target.value)}
-                  placeholder="Catatan teknisi..."
-                  rows={2}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </>
-          )}
           <CustomerSelector
             customers={customers}
             selectedId={selectedCustomerId}
@@ -711,6 +664,8 @@ export function PosPage() {
               setCustomers((prev) => [...prev, c]);
               setSelectedCustomerId(c.id);
             }}
+            isRequired={hasServiceItems}
+            onServiceDataChange={(data) => { serviceDataRef.current = data; }}
           />
           <PaymentMethodSelector value={paymentMethod} onChange={(m) => setPaymentMethod(m as keyof typeof PAYMENT_METHODS)} />
           {!isOnlinePayment && (
