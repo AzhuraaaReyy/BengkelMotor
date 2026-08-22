@@ -22,7 +22,7 @@ interface Props {
 
 export function PaymentMethodSelector({ value, onChange }: Props) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
       {Object.values(PAYMENT_METHODS).map((method) => {
         const Icon = ICONS[method as keyof typeof ICONS];
         const isSelected = value === method;
@@ -31,7 +31,7 @@ export function PaymentMethodSelector({ value, onChange }: Props) {
             key={method}
             type="button"
             onClick={() => onChange(method)}
-            className={`flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-colors ${
+            className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2.5 md:p-3 text-center transition-colors ${
               isSelected
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-gray-200 hover:border-gray-300"

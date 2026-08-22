@@ -66,7 +66,7 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
           <span className="text-sm text-gray-500">{sale.sale_code}</span>
         </div>
 
-        <div className="text-center text-3xl font-bold tabular-nums">
+        <div className="text-center text-2xl md:text-3xl font-bold tabular-nums">
           {formatRupiah(sale.grand_total)}
         </div>
 
@@ -87,9 +87,9 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
           <div className="flex flex-col items-center gap-2">
             <div className="bg-white p-4 rounded-lg">
               {sale.gateway_qr_string ? (
-                <QRCode value={sale.gateway_qr_string} size={200} />
+                <QRCode value={sale.gateway_qr_string} size={180} className="w-[140px] h-[140px] md:w-[180px] md:h-[180px]" />
               ) : sale.gateway_qr_url ? (
-                <img src={sale.gateway_qr_url} alt="QRIS" className="h-[200px] w-[200px] object-contain" />
+                <img src={sale.gateway_qr_url} alt="QRIS" className="h-[140px] w-[140px] md:h-[180px] md:w-[180px] object-contain" />
               ) : null}
             </div>
             <p className="text-sm text-gray-500">Buka GoPay / e-wallet / m-banking lalu Scan QRIS</p>
@@ -100,7 +100,7 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-gray-500">Nomor Virtual Account</p>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-mono font-bold">{sale.gateway_va_number}</span>
+              <span className="text-xl md:text-2xl font-mono font-bold break-all">{sale.gateway_va_number}</span>
               <button onClick={copyVa} className="rounded-md border p-2 hover:bg-gray-50">
                 <Copy className="h-4 w-4" />
               </button>

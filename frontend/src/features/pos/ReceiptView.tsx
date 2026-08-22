@@ -4,7 +4,7 @@ import { PrinterIcon, CheckIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
 import { PAYMENT_LABEL } from "@/lib/constants";
 import type { Sale } from "@/types";
-import { Link } from "react-router-dom";
+
 
 export function ReceiptView({
   sale,
@@ -20,7 +20,7 @@ export function ReceiptView({
   };
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-md lg:max-w-lg">
       <Card className="text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-subtle text-success">
           <CheckIcon className="h-6 w-6" />
@@ -127,17 +127,14 @@ export function ReceiptView({
         </p>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 print:hidden">
-        <Button variant="secondary" onClick={handlePrint}>
+      <div className="mt-4 flex flex-col md:flex-row md:flex-wrap gap-2 print:hidden">
+        <Button variant="secondary" onClick={handlePrint} className="md:flex-1">
           <PrinterIcon className="h-4 w-4" />
           Cetak Nota
         </Button>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="secondary" onClick={onClose} className="md:flex-1">
           Transaksi Baru
         </Button>
-        <Link to="/servis" className="btn-primary w-full">
-          Daftar Servis
-        </Link>
       </div>
     </div>
   );
