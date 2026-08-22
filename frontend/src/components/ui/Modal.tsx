@@ -12,8 +12,8 @@ interface ModalProps {
 
 const sizes = {
   sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-2xl",
+  md: "max-w-md lg:max-w-lg",
+  lg: "max-w-2xl lg:max-w-4xl",
 };
 
 export function Modal({
@@ -64,7 +64,7 @@ export function Modal({
             </button>
           </header>
         )}
-        <div className="px-5 py-4">{children}</div>
+        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
           <footer className="flex justify-end gap-2 border-t border-border px-5 py-4">
             {footer}
