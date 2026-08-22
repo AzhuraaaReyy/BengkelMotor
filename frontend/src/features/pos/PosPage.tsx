@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
@@ -27,8 +26,6 @@ interface CartLine {
 
 export function PosPage() {
   const toast = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const serviceOrderId = searchParams.get("service_order");
 
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -52,63 +49,10 @@ export function PosPage() {
   > | null>(null);
   const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-
-  // Explicitly detach the current cart from a linked service order, keeping
-  // whatever items are already in the cart — used by the "Lepas tautan"
-  // button when the Kasir deliberately decides mid-cart that this is an
-  // unrelated walk-in purchase, not the order's transaction.
-  const skipCartResetOnNextLinkChange = useRef(false);
-  const clearServiceOrderLink = useCallback(() => {
-    skipCartResetOnNextLinkChange.current = true;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("service_order");
-        return next;
-      },
-      { replace: true },
-    );
-    toast.success(
-      "Tautan ke order servis dilepas. Transaksi ini sekarang jadi pembelian sparepart/jasa biasa.",
-    );
-  }, [setSearchParams, toast]);
-
-  // Safety net against mixing two customers' items in one cart: whenever the
-  // linked order context changes for any reason OTHER than the deliberate
-  // "Lepas tautan" click above — e.g. clicking the sidebar "POS" link, or a
-  // different order's "Transaksi" link, while this cart still has unpaid
-  // items in it — the cart is a leftover from a *different* transaction and
-  // must not silently carry over into the new context. It's cleared and the
-  // Kasir is told plainly what happened, instead of finding out only after
-  // checkout that the wrong customer/order was charged.
-  const cartRef = useRef(cart);
-  useEffect(() => {
-    cartRef.current = cart;
-  }, [cart]);
-
-  const previousServiceOrderIdRef = useRef(serviceOrderId);
-  useEffect(() => {
-    const previous = previousServiceOrderIdRef.current;
-    previousServiceOrderIdRef.current = serviceOrderId;
-    if (previous === serviceOrderId) return;
-
-    if (skipCartResetOnNextLinkChange.current) {
-      skipCartResetOnNextLinkChange.current = false;
-      return;
-    }
-
-    if (cartRef.current.length > 0) {
-      setCart([]);
-      setDiscount(0);
-      const target = serviceOrderId
-        ? `Order Servis #${serviceOrderId}`
-        : "transaksi baru (tanpa order servis)";
-      const source = previous ? `Order Servis #${previous}` : "transaksi sebelumnya";
-      toast.error(
-        `Keranjang dikosongkan otomatis — konteks transaksi berpindah dari ${source} ke ${target}, item lama tidak ikut terbawa.`,
-      );
-    }
-  }, [serviceOrderId]);
+  const [isService, setIsService] = useState(false);
+  const [complaint, setComplaint] = useState("");
+  const [diagnosisNote, setDiagnosisNote] = useState("");
+  const [motorcycleType, setMotorcycleType] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -227,11 +171,14 @@ export function PosPage() {
   const isOnlinePayment = ["QRIS", "VA", "GOPAY"].includes(paymentMethod);
 
   const doCheckout = async () => {
+    if (isService && !complaint.trim()) {
+      toast.error("Keluhan pelanggan wajib diisi untuk transaksi servis.");
+      return;
+    }
     setCheckoutLoading(true);
     try {
       const sale = await createSaleApi({
         customer_id: selectedCustomerId ?? undefined,
-        service_order_id: serviceOrderId ? Number(serviceOrderId) : undefined,
         discount_amount: safeDiscount,
         items: cart.map((l) =>
           l.item_type === "PRODUCT"
@@ -251,6 +198,10 @@ export function PosPage() {
         payment_method: paymentMethod,
         paid_amount: isOnlinePayment ? undefined : paidAmount,
         discount_amount: safeDiscount,
+        is_service: isService || undefined,
+        complaint: isService ? complaint : undefined,
+        diagnosis_note: isService && diagnosisNote ? diagnosisNote : undefined,
+        motorcycle_type: isService && motorcycleType ? motorcycleType : undefined,
       });
       if (isOnlinePayment) {
         setWaitingPaymentSale(paid);
@@ -277,7 +228,10 @@ export function PosPage() {
     setCart([]);
     setDiscount(0);
     setPaidAmount(0);
-    clearServiceOrderLink();
+    setIsService(false);
+    setComplaint("");
+    setDiagnosisNote("");
+    setMotorcycleType("");
   };
 
   if (waitingPaymentSale) {
@@ -321,35 +275,6 @@ export function PosPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* === KATALOG PRODUK & JASA (KIRI) === */}
         <div className="md:col-span-7 lg:col-span-8 space-y-6">
-          {/* Konteks transaksi saat ini — dibuat menonjol agar Kasir selalu
-              sadar keranjang ini untuk siapa sebelum menambah item, dan tidak
-              tercampur dengan pelanggan lain. */}
-          {serviceOrderId ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5">
-              <p className="text-xs font-semibold text-blue-700">
-                Transaksi ini ditautkan ke{" "}
-                <span className="font-bold">
-                  Order Servis #{serviceOrderId}
-                </span>{" "}
-                — item yang ditambahkan akan tercatat untuk order ini.
-              </p>
-              <button
-                type="button"
-                onClick={clearServiceOrderLink}
-                className="shrink-0 rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] font-bold text-blue-700 hover:bg-blue-100"
-                title="Lepas tautan — jadikan transaksi ini pembelian sparepart/jasa biasa, tidak terkait order servis ini"
-              >
-                Lepas tautan
-              </button>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-              <p className="text-xs font-semibold text-slate-500">
-                Transaksi umum — tidak ditautkan ke order servis mana pun.
-              </p>
-            </div>
-          )}
-
           {/* Header Katalog + Filter Button */}
           <div className="flex items-center justify-between">
             <div>
@@ -731,17 +656,62 @@ export function PosPage() {
               {formatRupiah(grandTotal)}
             </p>
           </div>
-          {!serviceOrderId && (
-            <CustomerSelector
-              customers={customers}
-              selectedId={selectedCustomerId}
-              onSelect={setSelectedCustomerId}
-              onCustomerCreated={(c) => {
-                setCustomers((prev) => [...prev, c]);
-                setSelectedCustomerId(c.id);
-              }}
+          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isService}
+              onChange={(e) => setIsService(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
+            <div>
+              <p className="text-sm font-bold text-slate-800">Ini Transaksi Servis</p>
+              <p className="text-[11px] text-slate-500">Centang jika pelanggan melakukan servis</p>
+            </div>
+          </label>
+          {isService && (
+            <>
+              <Input
+                label="Tipe Motor"
+                name="motorcycle_type"
+                placeholder="Contoh: Honda Beat, Yamaha Mio"
+                value={motorcycleType}
+                onChange={(e) => setMotorcycleType(e.target.value)}
+              />
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Keluhan Pelanggan <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={complaint}
+                  onChange={(e) => setComplaint(e.target.value)}
+                  placeholder="Jelaskan keluhan pelanggan..."
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">
+                  Catatan Diagnosa <span className="text-slate-400">(opsional)</span>
+                </label>
+                <textarea
+                  value={diagnosisNote}
+                  onChange={(e) => setDiagnosisNote(e.target.value)}
+                  placeholder="Catatan teknisi..."
+                  rows={2}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </>
           )}
+          <CustomerSelector
+            customers={customers}
+            selectedId={selectedCustomerId}
+            onSelect={setSelectedCustomerId}
+            onCustomerCreated={(c) => {
+              setCustomers((prev) => [...prev, c]);
+              setSelectedCustomerId(c.id);
+            }}
+          />
           <PaymentMethodSelector value={paymentMethod} onChange={(m) => setPaymentMethod(m as keyof typeof PAYMENT_METHODS)} />
           {!isOnlinePayment && (
             <>

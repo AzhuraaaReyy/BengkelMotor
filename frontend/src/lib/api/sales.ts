@@ -10,7 +10,6 @@ export interface CartLineInput {
 
 export interface CreateSalePayload {
   customer_id?: number | null;
-  service_order_id?: number | null;
   items: CartLineInput[];
   discount_amount: number;
 }
@@ -19,6 +18,10 @@ export interface CheckoutPayload {
   payment_method: "CASH" | "QRIS" | "VA" | "GOPAY";
   paid_amount?: number;
   discount_amount: number;
+  is_service?: boolean;
+  complaint?: string;
+  diagnosis_note?: string;
+  motorcycle_type?: string;
 }
 
 export interface SalesListResponse {

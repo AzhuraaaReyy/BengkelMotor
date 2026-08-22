@@ -7,7 +7,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PosPage } from "@/features/pos/PosPage";
-import { ServisPage } from "@/features/servis/ServisPage";
 import { ProductsPage } from "@/features/products/ProductsPage";
 import { ServicesPage } from "@/features/services/ServicesPage";
 import { ExpensesPage } from "@/features/expenses/ExpensesPage";
@@ -91,14 +90,9 @@ export const router = createBrowserRouter([
         ),
       },
       { path: "pos", element: <PosPage /> },
-      { path: "servis", element: <ServisPage /> },
       { path: "riwayat", element: <SalesHistoryPage /> },
       { path: "produk", element: <ProductsPage /> },
       { path: "produk/:id", element: <ProductsPage /> },
-      {
-        path: "pelanggan",
-        element: <Navigate to="/servis?tab=customers" replace />,
-      },
       { path: "jasa", element: <ServicesPage /> },
       {
         path: "pengeluaran",

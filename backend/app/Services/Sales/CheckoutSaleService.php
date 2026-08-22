@@ -11,6 +11,7 @@ use App\Models\StockMovement;
 use App\Services\Audit\AuditService;
 use App\Services\Inventory\StockLedger;
 use App\Services\Payments\PaymentService;
+use App\Support\CodeGenerator;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -29,7 +30,7 @@ class CheckoutSaleService
      *
      * @throws RuntimeException|ValidationException
      */
-    public function checkout(Sale $sale, string $paymentMethod, ?float $paidAmount, float $discountAmount, ?int $customerId = null, ?int $serviceOrderId = null): Sale
+    public function checkout(Sale $sale, string $paymentMethod, ?float $paidAmount, float $discountAmount, ?int $customerId = null, ?int $serviceOrderId = null, bool $isService = false, ?string $complaint = null, ?string $diagnosisNote = null, ?string $motorcycleType = null): Sale
     {
         if ($sale->status !== Sale::STATUS_DRAFT) {
             throw new RuntimeException('Only DRAFT sales can be checked out.', 409);
@@ -39,7 +40,7 @@ class CheckoutSaleService
             throw new RuntimeException('Discount cannot be negative.', 422);
         }
 
-        return DB::transaction(function () use ($sale, $paymentMethod, $paidAmount, $discountAmount, $customerId, $serviceOrderId) {
+        return DB::transaction(function () use ($sale, $paymentMethod, $paidAmount, $discountAmount, $customerId, $serviceOrderId, $isService, $complaint, $diagnosisNote, $motorcycleType) {
             // Lock the sale header row and re-verify status inside the lock so two
             // concurrent checkout requests for the same sale cannot both proceed
             // (prevents double PAID transition / duplicate SALE stock movements).
@@ -155,6 +156,22 @@ class CheckoutSaleService
             }
 
             $sale->save();
+
+            // Create a service order if this is a service transaction
+            if ($isService && !$sale->service_order_id) {
+                $serviceOrder = ServiceOrder::create([
+                    'order_code' => CodeGenerator::orderCode(),
+                    'customer_id' => $sale->customer_id,
+                    'motorcycle_type' => $motorcycleType,
+                    'cashier_id' => $cashier->id,
+                    'complaint' => $complaint,
+                    'diagnosis_note' => $diagnosisNote,
+                    'status' => ServiceOrder::STATUS_OPEN,
+                    'opened_at' => now(),
+                ]);
+                $sale->service_order_id = $serviceOrder->id;
+                $sale->save();
+            }
 
             // Online method: delegate to PaymentService (creates charge, sets PENDING, reserves stock).
             if (in_array($paymentMethod, Sale::ONLINE_METHODS, true)) {

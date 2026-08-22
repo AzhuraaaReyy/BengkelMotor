@@ -40,16 +40,16 @@ class SaleController extends Controller
     {
         $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
-            // A service order can only ever back one sale (sales.service_order_id
-            // is unique in the schema) — reject the duplicate here with a clean
-            // 422 instead of letting it fall through to a raw DB constraint error.
             'service_order_id' => ['nullable', 'exists:service_orders,id', Rule::unique('sales', 'service_order_id')],
             'items' => ['required', 'array', 'min:1'],
             'items.*.item_type' => ['required', 'in:PRODUCT,SERVICE'],
             'items.*.product_id' => ['required_if:items.*.item_type,PRODUCT', 'nullable', 'exists:products,id'],
             'items.*.service_id' => ['required_if:items.*.item_type,SERVICE', 'nullable', 'exists:services,id'],
-            // Quantities are whole numbers only (Fase 3).
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'is_service' => ['boolean'],
+            'complaint' => ['required_if:is_service,true', 'nullable', 'string'],
+            'diagnosis_note' => ['nullable', 'string'],
+            'motorcycle_type' => ['nullable', 'string', 'max:100'],
         ]);
 
         $sale = Sale::create([
@@ -163,6 +163,10 @@ $request->validate([
                 'exists:service_orders,id',
                 Rule::unique('sales', 'service_order_id')->ignore($sale->id),
             ],
+            'is_service' => ['boolean'],
+            'complaint' => ['required_if:is_service,true', 'nullable', 'string'],
+            'diagnosis_note' => ['nullable', 'string'],
+            'motorcycle_type' => ['nullable', 'string', 'max:100'],
         ]);
 
         try {
@@ -173,6 +177,10 @@ $request->validate([
                 $validated['discount_amount'] ?? 0,
                 $validated['customer_id'] ?? null,
                 $validated['service_order_id'] ?? null,
+                $validated['is_service'] ?? false,
+                $validated['complaint'] ?? null,
+                $validated['diagnosis_note'] ?? null,
+                $validated['motorcycle_type'] ?? null,
             );
 
             $paid->load(['items', 'cashier:id,name', 'customer:id,name']);

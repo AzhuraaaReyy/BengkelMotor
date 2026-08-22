@@ -39,12 +39,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
   },
   { to: "/pos", label: "POS", icon: PosIcon, roles: ["ADMIN", "CASHIER"] },
-  {
-    to: "/servis",
-    label: "Servis",
-    icon: WrenchIcon,
-    roles: ["ADMIN", "CASHIER"],
-  },
   { to: "/produk", label: "Produk & Stok", icon: BoxIcon, roles: ["ADMIN", "CASHIER"] },
   {
     to: "/riwayat",
@@ -70,7 +64,6 @@ const NAV_ITEMS: NavItem[] = [
 const PAGE_META: Array<{ path: string; title: string; description: string }> = [
   { path: "/dashboard", title: "Dashboard", description: "Ringkasan kondisi bengkel hari ini" },
   { path: "/pos", title: "POS", description: "Transaksi penjualan sparepart & jasa servis" },
-  { path: "/servis", title: "Servis", description: "Order servis & data pelanggan" },
   { path: "/riwayat", title: "Riwayat Transaksi", description: "Semua transaksi POS yang tercatat" },
   { path: "/produk", title: "Produk & Stok", description: "Manajemen sparepart, harga beli, harga jual, dan stok" },
   { path: "/jasa", title: "Jasa Servis", description: "Katalog harga jasa servis" },
