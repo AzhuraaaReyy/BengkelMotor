@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await logoutApi();
     } finally {
+      sessionStorage.removeItem("stockDismissSession");
       setUser(null);
     }
   }, []);
