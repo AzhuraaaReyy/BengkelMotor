@@ -46,7 +46,7 @@ function RequireRole({
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-  if (!roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (!roles.includes(user.role)) return <Navigate to="/pos" replace />;
   return <>{children}</>;
 }
 
