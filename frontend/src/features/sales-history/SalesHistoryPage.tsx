@@ -83,6 +83,19 @@ export function SalesHistoryPage() {
     }
   };
 
+  const openReceipt = async (sale: Sale) => {
+    setDetailLoading(true);
+    try {
+      const full = await getSaleApi(sale.id);
+      setReceiptSale(full);
+    } catch (e) {
+      const err = e as { message?: string };
+      toast.error(err.message || "Gagal memuat data struk.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const openVoid = (sale: Sale) => {
     setVoidReason("");
     setVoidTarget(sale);
@@ -167,7 +180,7 @@ export function SalesHistoryPage() {
             </Button>
           )}
           {r.status === "PAID" && (
-            <Button variant="ghost" size="sm" onClick={() => setReceiptSale(r)}>
+            <Button variant="ghost" size="sm" onClick={() => openReceipt(r)}>
               Cetak Struk
             </Button>
           )}
@@ -262,7 +275,7 @@ export function SalesHistoryPage() {
                       </Button>
                     )}
                     {s.status === "PAID" && (
-                      <Button variant="ghost" size="sm" onClick={() => setReceiptSale(s)}>
+                      <Button variant="ghost" size="sm" onClick={() => openReceipt(s)}>
                         Cetak
                       </Button>
                     )}
@@ -405,7 +418,7 @@ export function SalesHistoryPage() {
 
             {detail.status === "PAID" && (
               <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setReceiptSale(detail)}>
+                <Button variant="secondary" onClick={() => openReceipt(detail)}>
                   Cetak Struk
                 </Button>
                 {isAdmin && (
