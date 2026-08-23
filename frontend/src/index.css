@@ -174,11 +174,13 @@
   main > div:not(.thermal-scroll),
   .fixed.inset-0 > header,
   .fixed.inset-0 > footer,
-  /* Hide modal backdrop and card wrapper */
-  .fixed.inset-0.bg-black\/40,
-  .fixed.inset-0 > div.rounded-card,
-  .fixed.inset-0 > div > div.max-h-\[70vh\],
-  .fixed.inset-0 > div > div.overflow-y-auto {
+  /* Fix modal selectors - backdrop uses absolute, card is direct child of fixed.inset-0 */
+  .absolute.inset-0.bg-black\/40,
+  .fixed.inset-0 > .rounded-card,
+  .fixed.inset-0 > .rounded-card > header,
+  .fixed.inset-0 > .rounded-card > footer,
+  .fixed.inset-0 > .rounded-card > .max-h-\[70vh\],
+  .fixed.inset-0 > .rounded-card > .overflow-y-auto {
     display: none !important;
   }
   
