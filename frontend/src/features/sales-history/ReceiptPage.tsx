@@ -26,8 +26,6 @@ export function ReceiptPage() {
       setError(null);
       try {
         const data = await getSaleApi(Number(id));
-        console.log('Sale data received:', data);
-        console.log('Sale items:', data.items);
         setSale(data);
       } catch (e) {
         const err = e as { message?: string };
