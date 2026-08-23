@@ -175,8 +175,10 @@
   }
   
   /* Hide all main content except the receipt container */
-  main > *:not(:has(.thermal-scroll)),
-  body > *:not(:has(.thermal-scroll)) {
+  /* The element with .thermal-scroll class itself doesn't have it as a descendant,
+     so we need to exclude elements that HAVE the class OR have it as descendant */
+  main > *:not(.thermal-scroll):not(:has(.thermal-scroll)),
+  body > *:not(.thermal-scroll):not(:has(.thermal-scroll)) {
     display: none !important;
   }
   

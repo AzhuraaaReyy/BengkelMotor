@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { PrinterIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
@@ -13,8 +14,16 @@ export function ReceiptView({
   onClose: () => void;
   customerName?: string;
 }) {
+  const isPrintingRef = useRef(false);
+
   const handlePrint = () => {
+    if (isPrintingRef.current) return;
+    isPrintingRef.current = true;
     window.print();
+    // Reset after print dialog closes (approximate)
+    setTimeout(() => {
+      isPrintingRef.current = false;
+    }, 1000);
   };
 
   const renderPaymentDetail = () => {
