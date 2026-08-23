@@ -170,15 +170,24 @@
   header,
   footer,
   aside,
-  .no-print {
-    display: none !important;
-  }
-  
-  /* Hide all main content except the receipt container */
-  /* The element with .thermal-scroll class itself doesn't have it as a descendant,
-     so we need to exclude elements that HAVE the class OR have it as descendant */
-  main > *:not(.thermal-scroll):not(:has(.thermal-scroll)),
-  body > *:not(.thermal-scroll):not(:has(.thermal-scroll)) {
+  .no-print,
+  /* Hide common UI elements by class */
+  .sidebar,
+  .navbar,
+  .nav,
+  .menu,
+  .breadcrumb,
+  .pagination,
+  .btn,
+  .button,
+  .action-bar,
+  .toolbar,
+  .page-header,
+  .page-title,
+  .card-header,
+  .table-actions,
+  .filters,
+  .search-bar {
     display: none !important;
   }
   
