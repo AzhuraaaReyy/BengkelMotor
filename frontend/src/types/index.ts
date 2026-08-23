@@ -3,7 +3,7 @@
 export type Role = "ADMIN" | "CASHIER";
 export type SaleStatus = "DRAFT" | "PENDING" | "PAID" | "EXPIRED" | "VOID";
 export type ServiceOrderStatus = "OPEN" | "IN_PROGRESS" | "DONE" | "CANCELLED";
-export type PaymentMethod = "CASH" | "QRIS" | "VA" | "GOPAY";
+export type PaymentMethod = "CASH" | "QRIS" | "VA";
 export type StockMovementType =
   | "OPENING"
   | "PURCHASE"
@@ -247,6 +247,27 @@ export interface DashboardData {
   low_stock: Product[];
   recent_sales: Sale[];
   recent_voids: Sale[];
+}
+
+// Notification types
+export type NotificationType = "STOCK" | "TRANSACTION" | "SYSTEM";
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationCounts {
+  stock: number;
+  transaction: number;
+  system: number;
+  total: number;
 }
 
 // ===== API response wrapper =====
