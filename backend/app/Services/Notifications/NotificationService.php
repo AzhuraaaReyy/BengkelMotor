@@ -52,7 +52,7 @@ class NotificationService
         return Notification::where('user_id', $user->id)
             ->where('type', 'STOCK')
             ->whereNull('read_at')
-            ->whereRaw("JSON_EXTRACT(data, '$.product_id') = ?", [$productId])
+            ->whereRaw("data->>'$.product_id' = ?", [$productId])
             ->exists();
     }
 

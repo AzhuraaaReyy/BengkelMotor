@@ -47,7 +47,7 @@ class StockLedger
         }
 
         foreach ($productItems as $item) {
-            $product = Product::find($item->product_id);
+            $product = $locked->get($item->product_id);
             if ($product) {
                 $this->stockNotification->check($product);
             }
