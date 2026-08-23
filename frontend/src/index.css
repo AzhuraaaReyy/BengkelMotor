@@ -171,7 +171,8 @@
   footer,
   aside,
   .no-print,
-  main > div:not(.thermal-scroll) {
+  main > div:not(:has(.thermal-scroll)),
+  body > div:not(:has(.thermal-scroll)) {
     display: none !important;
   }
   

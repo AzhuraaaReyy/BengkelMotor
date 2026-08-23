@@ -85,17 +85,8 @@ export function SalesHistoryPage() {
     }
   };
 
-  const openReceipt = async (sale: Sale) => {
-    setDetailLoading(true);
-    try {
-      const full = await getSaleApi(sale.id);
-      navigate(`/riwayat/${full.id}/struk`);
-    } catch (e) {
-      const err = e as { message?: string };
-      toast.error(err.message || "Gagal memuat data struk.");
-    } finally {
-      setDetailLoading(false);
-    }
+  const openReceipt = (sale: Sale) => {
+    navigate(`/riwayat/${sale.id}/struk`);
   };
 
   const openVoid = (sale: Sale) => {
