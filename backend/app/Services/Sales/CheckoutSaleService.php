@@ -217,6 +217,21 @@ class CheckoutSaleService
                 ]
             );
 
+            // Dispatch notification
+            $notificationService = app(\App\Services\Notifications\NotificationService::class);
+            $notificationService->create(
+                $cashier,
+                'TRANSACTION',
+                'Transaksi Berhasil',
+                "Transaksi {$sale->sale_code} berhasil dibayar",
+                [
+                    'sale_id' => $sale->id,
+                    'sale_code' => $sale->sale_code,
+                    'amount' => $sale->grand_total,
+                    'payment_method' => $sale->payment_method,
+                ]
+            );
+
             $sale->refresh();
             return $sale;
         }, 5);

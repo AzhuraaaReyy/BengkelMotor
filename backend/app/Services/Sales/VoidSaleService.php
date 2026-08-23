@@ -72,6 +72,21 @@ class VoidSaleService
                 $user->id
             );
 
+            // Dispatch notification
+            $notificationService = app(\App\Services\Notifications\NotificationService::class);
+            $notificationService->create(
+                $user,
+                'TRANSACTION',
+                'Transaksi Dibatalkan',
+                "Transaksi {$sale->sale_code} dibatalkan",
+                [
+                    'sale_id' => $sale->id,
+                    'sale_code' => $sale->sale_code,
+                    'amount' => $sale->grand_total,
+                    'reason' => $reason,
+                ]
+            );
+
             $sale->refresh();
             return $sale;
         }, 5);

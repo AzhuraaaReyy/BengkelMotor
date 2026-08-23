@@ -192,6 +192,20 @@ class PaymentService
                 $reason ?? 'Pembayaran kedaluwarsa / dibatalkan.'
             );
 
+            // Dispatch notification
+            $notificationService = app(\App\Services\Notifications\NotificationService::class);
+            $notificationService->create(
+                $sale->cashier,
+                'SYSTEM',
+                'Pembayaran Expired',
+                "Pembayaran untuk transaksi {$sale->sale_code} telah expired",
+                [
+                    'sale_id' => $sale->id,
+                    'sale_code' => $sale->sale_code,
+                    'amount' => $sale->grand_total,
+                ]
+            );
+
             $sale->refresh();
             return $sale;
         }, 5);
