@@ -11,6 +11,7 @@ import { getProductsApi } from "@/lib/api/products";
 import { getServicesApi } from "@/lib/api/services";
 import { getCustomersApi } from "@/lib/api/customers";
 import { checkoutSaleApi, createSaleApi, getSaleApi } from "@/lib/api/sales";
+import { useNotifications } from "@/lib/useNotifications";
 import { formatRupiah, formatNumber } from "@/lib/formatters";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
@@ -27,6 +28,7 @@ interface CartLine {
 
 export function PosPage() {
   const toast = useToast();
+  const { refresh: refreshNotifications } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -236,6 +238,8 @@ export function PosPage() {
       } else {
         setPaidSale(paid);
         setCheckoutOpen(false);
+        // Refresh notifications so stock alerts appear immediately after checkout
+        refreshNotifications();
       }
     } catch (e) {
       const err = e as { message?: string; errors?: Record<string, string[]> };
@@ -265,6 +269,7 @@ export function PosPage() {
         onPaid={(s) => {
           setPaidSale(s);
           setWaitingPaymentSale(null);
+          refreshNotifications();
         }}
         onExpired={() => {
           setWaitingPaymentSale(null);
