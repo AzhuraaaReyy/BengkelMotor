@@ -33,7 +33,7 @@ class NotificationService
 
     public function getUnreadCounts(User $user): array
     {
-        $counts = $this->baseQuery($user)
+        $counts = Notification::where('user_id', $user->id)
             ->whereNull('read_at')
             ->selectRaw("type, COUNT(*) as count")
             ->groupBy('type')
