@@ -31,7 +31,7 @@ Route::prefix('v1')->group(function () {
 
     // Public: auth (web middleware group starts the session so Sanctum SPA
     // cookie auth can persist the logged-in user across requests).
-    Route::prefix('auth')->middleware('web')->group(function () {
+    Route::prefix('auth')->group(function () {
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
         Route::get('me', [AuthController::class, 'me'])->middleware('auth:sanctum');
@@ -40,7 +40,7 @@ Route::prefix('v1')->group(function () {
     // Protected API (web middleware group starts the session so Sanctum SPA
     // cookie auth can resolve the authenticated user from the session).
     // throttle:api protects heavy endpoints (dashboard/report/export) from DoS.
-    Route::group(['middleware' => ['web', 'auth:sanctum', 'throttle:api']], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'throttle:api']], function () {
 
         // Dashboard (Admin only)
         Route::get('dashboard', [DashboardController::class, 'index'])
