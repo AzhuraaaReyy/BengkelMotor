@@ -173,12 +173,12 @@
   .no-print,
   main > div:not(.thermal-scroll),
   .fixed.inset-0 > header,
-  .fixed.inset-0 > footer {
-    display: none !important;
-  }
-  
-  /* Hide modal backdrop and non-receipt content in modals */
-  .fixed.inset-0.bg-black\/40 {
+  .fixed.inset-0 > footer,
+  /* Hide modal backdrop and card wrapper */
+  .fixed.inset-0.bg-black\/40,
+  .fixed.inset-0 > div.rounded-card,
+  .fixed.inset-0 > div > div.max-h-\[70vh\],
+  .fixed.inset-0 > div > div.overflow-y-auto {
     display: none !important;
   }
   

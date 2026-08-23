@@ -28,38 +28,101 @@ export function ReceiptView({
       case "QRIS":
         return (
           <>
-            <div className="kv-row"><span className="kv-label">Metode</span><span className="kv-value">QRIS</span></div>
-            <div className="kv-row"><span className="kv-label">Status</span><span className="kv-value">LUNAS</span></div>
-            {gatewayId && <div className="kv-row"><span className="kv-label">Referensi</span><span className="kv-value">{gatewayId}</span></div>}
-            <div className="kv-row"><span className="kv-label">Total Dibayar</span><span className="kv-value">{formatRupiah(sale.grand_total)}</span></div>
+            <div className="kv-row">
+              <span className="kv-label">Metode</span>
+              <span className="kv-value">QRIS</span>
+            </div>
+            <div className="kv-row">
+              <span className="kv-label">Status</span>
+              <span className="kv-value">LUNAS</span>
+            </div>
+            {gatewayId && (
+              <div className="kv-row">
+                <span className="kv-label">Referensi</span>
+                <span className="kv-value">{gatewayId}</span>
+              </div>
+            )}
+            <div className="kv-row">
+              <span className="kv-label">Total Dibayar</span>
+              <span className="kv-value">{formatRupiah(sale.grand_total)}</span>
+            </div>
           </>
         );
       case "VA":
         return (
           <>
-            <div className="kv-row"><span className="kv-label">Metode</span><span className="kv-value">VIRTUAL ACCOUNT</span></div>
-            <div className="kv-row"><span className="kv-label">Bank</span><span className="kv-value">BCA</span></div>
-            {vaNumber && <div className="kv-row"><span className="kv-label">No. VA</span><span className="kv-value">{vaNumber}</span></div>}
-            <div className="kv-row"><span className="kv-label">Status</span><span className="kv-value">LUNAS</span></div>
-            {gatewayId && <div className="kv-row"><span className="kv-label">Referensi</span><span className="kv-value">{gatewayId}</span></div>}
-            <div className="kv-row"><span className="kv-label">Total Dibayar</span><span className="kv-value">{formatRupiah(sale.grand_total)}</span></div>
+            <div className="kv-row">
+              <span className="kv-label">Metode</span>
+              <span className="kv-value">VIRTUAL ACCOUNT</span>
+            </div>
+            <div className="kv-row">
+              <span className="kv-label">Bank</span>
+              <span className="kv-value">BCA</span>
+            </div>
+            {vaNumber && (
+              <div className="kv-row">
+                <span className="kv-label">No. VA</span>
+                <span className="kv-value">{vaNumber}</span>
+              </div>
+            )}
+            <div className="kv-row">
+              <span className="kv-label">Status</span>
+              <span className="kv-value">LUNAS</span>
+            </div>
+            {gatewayId && (
+              <div className="kv-row">
+                <span className="kv-label">Referensi</span>
+                <span className="kv-value">{gatewayId}</span>
+              </div>
+            )}
+            <div className="kv-row">
+              <span className="kv-label">Total Dibayar</span>
+              <span className="kv-value">{formatRupiah(sale.grand_total)}</span>
+            </div>
           </>
         );
       case "CASH":
         return (
           <>
-            <div className="kv-row"><span className="kv-label">Metode</span><span className="kv-value">TUNAI</span></div>
-            <div className="kv-row"><span className="kv-label">Status</span><span className="kv-value">LUNAS</span></div>
-            {paid != null && <div className="kv-row"><span className="kv-label">Dibayar</span><span className="kv-value">{formatRupiah(paid)}</span></div>}
-            {change != null && change > 0 && <div className="kv-row"><span className="kv-label">Kembalian</span><span className="kv-value">{formatRupiah(change)}</span></div>}
+            <div className="kv-row">
+              <span className="kv-label">Metode</span>
+              <span className="kv-value">TUNAI</span>
+            </div>
+            <div className="kv-row">
+              <span className="kv-label">Status</span>
+              <span className="kv-value">LUNAS</span>
+            </div>
+            {paid != null && (
+              <div className="kv-row">
+                <span className="kv-label">Dibayar</span>
+                <span className="kv-value">{formatRupiah(paid)}</span>
+              </div>
+            )}
+            {change != null && change > 0 && (
+              <div className="kv-row">
+                <span className="kv-label">Kembalian</span>
+                <span className="kv-value">{formatRupiah(change)}</span>
+              </div>
+            )}
           </>
         );
       default:
         return (
           <>
-            <div className="kv-row"><span className="kv-label">Metode</span><span className="kv-value">{method ? PAYMENT_LABEL[method] : "-"}</span></div>
-            <div className="kv-row"><span className="kv-label">Status</span><span className="kv-value">LUNAS</span></div>
-            <div className="kv-row"><span className="kv-label">Total Dibayar</span><span className="kv-value">{formatRupiah(sale.grand_total)}</span></div>
+            <div className="kv-row">
+              <span className="kv-label">Metode</span>
+              <span className="kv-value">
+                {method ? PAYMENT_LABEL[method] : "-"}
+              </span>
+            </div>
+            <div className="kv-row">
+              <span className="kv-label">Status</span>
+              <span className="kv-value">LUNAS</span>
+            </div>
+            <div className="kv-row">
+              <span className="kv-label">Total Dibayar</span>
+              <span className="kv-value">{formatRupiah(sale.grand_total)}</span>
+            </div>
           </>
         );
     }
@@ -71,22 +134,34 @@ export function ReceiptView({
         <div className="thermal-receipt">
           {/* Header Bengkel */}
           <div className="text-center mb-4">
-            <p className="font-bold text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p
+              className="font-bold text-lg"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               {BENGKEL_CONFIG.NAMA}
             </p>
             <p className="text-xs text-gray-500">{BENGKEL_CONFIG.TAGLINE}</p>
             <p className="text-xs text-gray-500">{BENGKEL_CONFIG.ALAMAT}</p>
           </div>
 
-          <div className="section-divider"></div>
+          <div className="section-divider "></div>
 
           {/* Bucket Transaksi */}
           <p className="section-title">BUKTI TRANSAKSI</p>
           <div className="section-divider"></div>
 
-          <div className="kv-row"><span className="kv-label">No. Transaksi</span><span className="kv-value">{sale.sale_code}</span></div>
-          <div className="kv-row"><span className="kv-label">Tanggal</span><span className="kv-value">{formatDateTime(sale.paid_at)}</span></div>
-          <div className="kv-row"><span className="kv-label">Kasir</span><span className="kv-value">{sale.cashier?.name || "-"}</span></div>
+          <div className="kv-row">
+            <span className="kv-label">No. Transaksi</span>
+            <span className="kv-value">{sale.sale_code}</span>
+          </div>
+          <div className="kv-row">
+            <span className="kv-label">Tanggal</span>
+            <span className="kv-value">{formatDateTime(sale.paid_at)}</span>
+          </div>
+          <div className="kv-row">
+            <span className="kv-label">Kasir</span>
+            <span className="kv-value">{sale.cashier?.name || "-"}</span>
+          </div>
 
           <div className="section-divider"></div>
 
@@ -95,7 +170,10 @@ export function ReceiptView({
             <>
               <p className="section-title">PELANGGAN</p>
               <div className="section-divider"></div>
-              <div className="kv-row"><span className="kv-label">Nama</span><span className="kv-value">{customerName}</span></div>
+              <div className="kv-row">
+                <span className="kv-label">Nama</span>
+                <span className="kv-value">{customerName}</span>
+              </div>
               <div className="section-divider"></div>
             </>
           )}
@@ -107,12 +185,14 @@ export function ReceiptView({
             <div key={i} className="item-row">
               <div>
                 <div className="item-name">{item.item_name_snapshot}</div>
-                <div className="item-qty-price">{formatNumber(item.quantity)} × {formatRupiah(item.unit_price)}</div>
+                <div className="item-qty-price">
+                  {formatNumber(item.quantity)} ×{" "}
+                  {formatRupiah(item.unit_price)}
+                </div>
               </div>
               <div className="item-total">{formatRupiah(item.subtotal)}</div>
             </div>
           ))}
-          <div className="section-divider"></div>
 
           {/* Total */}
           <div className="kv-row total-row">
@@ -131,10 +211,16 @@ export function ReceiptView({
 
           {/* Footer */}
           <p className="footer-note">
-            Terima kasih telah mempercayakan kendaraan Anda kepada:<br />
-            <strong>{BENGKEL_CONFIG.NAMA}</strong><br /><br />
-            Simpan struk ini sebagai bukti transaksi dan service kendaraan.<br />
-            Barang yang sudah dibeli tidak dapat dikembalikan kecuali sesuai ketentuan garansi toko.<br />
+            Terima kasih telah mempercayakan kendaraan Anda kepada:
+            <br />
+            <strong>{BENGKEL_CONFIG.NAMA}</strong>
+            <br />
+            <br />
+            Simpan struk ini sebagai bukti transaksi dan service kendaraan.
+            <br />
+            Barang yang sudah dibeli tidak dapat dikembalikan kecuali sesuai
+            ketentuan garansi toko.
+            <br />
             Semoga perjalanan Anda aman.
           </p>
         </div>
