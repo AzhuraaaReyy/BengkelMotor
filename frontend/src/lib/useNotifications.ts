@@ -13,7 +13,6 @@ export function useNotifications() {
   const [unreadCounts, setUnreadCounts] = useState<NotificationCounts>({
     stock: 0,
     transaction: 0,
-    system: 0,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -62,7 +61,6 @@ export function useNotifications() {
       setUnreadCounts((prev) => ({
         ...prev,
         transaction: 0,
-        system: 0,
         total: prev.stock,
       }));
     } catch {

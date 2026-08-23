@@ -250,7 +250,7 @@ export interface DashboardData {
 }
 
 // Notification types
-export type NotificationType = "STOCK" | "TRANSACTION" | "SYSTEM";
+export type NotificationType = "STOCK" | "TRANSACTION";
 
 export interface Notification {
   id: number;
@@ -266,7 +266,6 @@ export interface Notification {
 export interface NotificationCounts {
   stock: number;
   transaction: number;
-  system: number;
   total: number;
 }
 

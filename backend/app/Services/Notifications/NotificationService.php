@@ -43,9 +43,17 @@ class NotificationService
         return [
             'stock' => $counts['STOCK'] ?? 0,
             'transaction' => $counts['TRANSACTION'] ?? 0,
-            'system' => $counts['SYSTEM'] ?? 0,
             'total' => array_sum($counts),
         ];
+    }
+
+    public function hasUnreadStockForProduct(User $user, int $productId): bool
+    {
+        return Notification::where('user_id', $user->id)
+            ->where('type', 'STOCK')
+            ->whereNull('read_at')
+            ->whereRaw("JSON_EXTRACT(data, '$.product_id') = ?", [$productId])
+            ->exists();
     }
 
     public function markAsRead(Notification $notification): void
@@ -57,7 +65,7 @@ class NotificationService
     {
         $this->baseQuery($user)
             ->whereNull('read_at')
-            ->whereIn('type', ['TRANSACTION', 'SYSTEM'])
+            ->where('type', 'TRANSACTION')
             ->update(['read_at' => now()]);
     }
 

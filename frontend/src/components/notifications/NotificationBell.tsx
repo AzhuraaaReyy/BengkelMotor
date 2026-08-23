@@ -12,10 +12,9 @@ export function NotificationBell() {
 
   const stockNotifications = notifications.filter((n) => n.type === "STOCK");
   const transactionNotifications = notifications.filter((n) => n.type === "TRANSACTION");
-  const systemNotifications = notifications.filter((n) => n.type === "SYSTEM");
 
   const hasUnread = unreadCounts.total > 0;
-  const hasMarkableUnread = unreadCounts.transaction + unreadCounts.system > 0;
+  const hasMarkableUnread = unreadCounts.transaction > 0;
 
   const handleClose = () => setOpen(false);
   const handleBellClick = () => setOpen((v) => !v);
@@ -105,11 +104,6 @@ export function NotificationBell() {
                   notifications={stockNotifications}
                   onMarkAsRead={markAsRead}
                   emptyMessage="Stok aman"
-                />
-                <NotificationSection
-                  title="Info Sistem"
-                  notifications={systemNotifications}
-                  onMarkAsRead={markAsRead}
                 />
                 <NotificationSection
                   title="Transaksi"

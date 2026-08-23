@@ -5,11 +5,14 @@ namespace App\Services\Inventory;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
+use App\Services\Notifications\StockNotificationService;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
 class StockLedger
 {
+    public function __construct(private StockNotificationService $stockNotification) {}
+
     public function decrementForSale(Sale $sale, Collection $productItems, int $userId, string $type): void
     {
         $productIds = $productItems->pluck('product_id')->filter()->unique();
@@ -41,6 +44,13 @@ class StockLedger
                 'created_by' => $userId,
                 'created_at' => now(),
             ]);
+        }
+
+        foreach ($productItems as $item) {
+            $product = Product::find($item->product_id);
+            if ($product) {
+                $this->stockNotification->check($product);
+            }
         }
     }
 

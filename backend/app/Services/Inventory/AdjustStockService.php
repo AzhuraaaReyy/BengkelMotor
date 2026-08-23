@@ -7,14 +7,16 @@ use App\Models\Expense;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\Audit\AuditService;
+use App\Services\Notifications\StockNotificationService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class AdjustStockService
 {
-    public function __construct(private AuditService $audit)
-    {
-    }
+    public function __construct(
+        private AuditService $audit,
+        private StockNotificationService $stockNotification
+    ) {}
 
     /**
      * Stock adjustment for any authenticated user (Admin & Cashier — Fase 3:
@@ -91,8 +93,16 @@ class AdjustStockService
                 $this->createPurchaseExpense($product, $movement, $change, $note, $user);
             }
 
-            return $product->refresh();
+            $product = $product->refresh();
+            $this->checkStockNotification($product);
+
+            return $product;
         }, 5);
+    }
+
+    private function checkStockNotification(Product $product): void
+    {
+        $this->stockNotification->check($product);
     }
 
     private function createPurchaseExpense(
