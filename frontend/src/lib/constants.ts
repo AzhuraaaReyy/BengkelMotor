@@ -35,6 +35,7 @@ export const PAYMENT_METHODS: Record<PaymentMethod, PaymentMethod> = {
   CASH: "CASH",
   QRIS: "QRIS",
   VA: "VA",
+  GOPAY: "GOPAY",
 };
 
 export const STOCK_MOVEMENT_TYPES: Record<
@@ -68,6 +69,7 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   CASH: "Tunai",
   QRIS: "QRIS",
   VA: "Virtual Account",
+  GOPAY: "GoPay",
 };
 
 export const STOCK_MOVEMENT_LABEL: Record<StockMovementType, string> = {

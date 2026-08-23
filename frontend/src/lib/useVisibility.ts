@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 // Shared visibility state to consolidate listeners across hooks
 let visibilityCallbacks: ((visible: boolean) => void)[] = [];
 let isVisible = document.visibilityState === "visible";

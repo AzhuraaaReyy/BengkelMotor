@@ -1,16 +1,18 @@
 import { PAYMENT_METHODS, PAYMENT_LABEL } from "@/lib/constants";
-import { ShoppingCart, QrCode, Building2 } from "lucide-react";
+import { ShoppingCart, QrCode, Building2, Smartphone } from "lucide-react";
 
 const ICONS = {
   CASH: ShoppingCart,
   QRIS: QrCode,
   VA: Building2,
+  GOPAY: Smartphone,
 };
 
 const HELPERS = {
   CASH: "Bayar langsung di kasir",
   QRIS: "Pindai QR dari e-wallet / m-banking",
   VA: "Bayar lewat ATM / mobile banking",
+  GOPAY: "Bayar via GoPay",
 };
 
 interface Props {

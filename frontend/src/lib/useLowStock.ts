@@ -46,7 +46,7 @@ export function useLowStock() {
 
   // Periodic poll: 5 minutes (only when tab is visible via visibility gate)
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
+    let timer: ReturnType<typeof setInterval> | number;
     const startTimer = () => {
       timer = window.setInterval(() => {
         if (isVisible) load();

@@ -4,7 +4,18 @@ import { useAuth } from "@/app/auth/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { WrenchIcon } from "@/components/shared/icons";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, ShieldCheck } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  TrendingUp,
+  Package,
+  ShieldCheck,
+  Headphones,
+  Shield,
+} from "lucide-react";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -60,90 +71,109 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
-      {/* Kolom Kiri - Informasi & Visual */}
-      <div className="relative hidden w-full max-w-md flex-col justify-between overflow-hidden bg-[#0d2a5c] text-white lg:flex xl:max-w-xl 2xl:max-w-2xl">
-        {/* Background Image Overlay (OPTIMIZED) */}
+    // DIHAPUS: min-h-[700px]
+    // DITAMBAHKAN: overflow-hidden untuk mencegah scroll keseluruhan
+    <div className="flex h-screen w-full bg-[#f8fafc] font-sans overflow-hidden">
+      {/* --- KOLOM KIRI --- */}
+      <div
+        className="relative hidden h-full w-[55%] flex-col bg-[#0b2447] text-white md:flex z-10 shadow-2xl"
+        style={{ clipPath: "polygon(0 0, 100% 0, 85% 100%, 0 100%)" }}
+      >
+        {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          {/* Background Gradient (NO EXTERNAL IMAGE - FAST LOAD) */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0d2a5c] via-[#1a4f9c] to-[#0d2a5c]"></div>
+          <img
+            src="../../app/assets/backgroundmotor.png"
+            alt="Bengkel Background"
+            className="h-full w-full object-cover opacity-[0.15]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1a4f9c]/80 to-[#0b2447]/90"></div>
         </div>
 
-        {/* Konten Kolom Kiri */}
-        <div className="relative z-10 flex h-full flex-col p-12 lg:p-16">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            {/* Menghapus backdrop-blur yang berat */}
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/40">
-              <WrenchIcon className="h-6 w-6 text-white" />
+        {/* 
+          Konten Teks Kiri
+          Padding atas-bawah (py) dikurangi menjadi py-8 lg:py-10 agar tidak menabrak batas layar
+        */}
+        <div className="relative z-10 flex h-full flex-col justify-between pl-8 pr-20 py-8 lg:pl-12 lg:pr-28 lg:py-10">
+          <div>
+            {/* Header / Logo */}
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20 border border-blue-400/20">
+                <WrenchIcon className="h-5 w-5 text-white" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-base font-bold">Bengkel</p>
+                <p className="text-[10px] font-medium text-blue-200">
+                  POS & Monitoring
+                </p>
+              </div>
             </div>
-            <div className="leading-tight">
-              <p className="font-bold">Bengkel</p>
-              <p className="text-xs font-normal text-blue-200">
-                POS & Monitoring
+
+            {/* Headline Teks - Teks diperkecil dan margin atas (mt) dikurangi */}
+            <div className="mt-8 lg:mt-10">
+              <h1 className="text-2xl font-bold leading-tight xl:text-[28px] lg:leading-snug">
+                Kelola transaksi bengkel <br /> lebih mudah & efisien
+              </h1>
+              <p className="mt-3 text-[12px] leading-relaxed text-blue-100/90 lg:w-[90%] xl:text-[13px]">
+                Catat penjualan, pantau stok, dan kelola layanan bengkel dalam
+                satu sistem yang terintegrasi.
               </p>
             </div>
-          </div>
 
-          {/* Headline */}
-          <div className="mt-16">
-            <h1 className="text-3xl font-bold leading-tight xl:text-4xl">
-              Kelola transaksi bengkel <br /> lebih mudah & efisien
-            </h1>
-            <p className="mt-5 text-sm leading-relaxed text-blue-100/90 xl:w-4/5 xl:text-base">
-              Catat penjualan, pantau stok, dan kelola layanan bengkel dalam
-              satu sistem yang terintegrasi.
-            </p>
-          </div>
+            {/* List Fitur - Gap dan margin diperkecil */}
+            <div className="mt-6 flex flex-col gap-4 xl:gap-5 xl:mt-8">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-md">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-[13px]">
+                    Pantau Penjualan
+                  </h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-blue-100/80">
+                    Lihat laporan penjualan secara real-time dan akurat.
+                  </p>
+                </div>
+              </div>
 
-          {/* Features */}
-          <div className="mt-12 flex flex-col gap-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-sm">
-                <TrendingUp className="h-6 w-6" />
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-md">
+                  <Package className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-[13px]">
+                    Kelola Stok
+                  </h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-blue-100/80">
+                    Kontrol stok sparepart dan jasa dengan mudah.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-white">Pantau Penjualan</h3>
-                <p className="mt-1 text-sm leading-relaxed text-blue-100/80 xl:w-4/5">
-                  Lihat laporan penjualan secara real-time dan akurat.
-                </p>
-              </div>
-            </div>
 
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-sm">
-                <Package className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">Kelola Stok</h3>
-                <p className="mt-1 text-sm leading-relaxed text-blue-100/80 xl:w-4/5">
-                  Kontrol stok sparepart dan jasa dengan mudah.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-sm">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">Aman & Terpercaya</h3>
-                <p className="mt-1 text-sm leading-relaxed text-blue-100/80 xl:w-4/5">
-                  Data tersimpan aman dan hanya dapat diakses oleh pengguna
-                  terdaftar.
-                </p>
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-md">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white text-[13px]">
+                    Aman & Terpercaya
+                  </h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-blue-100/80">
+                    Data tersimpan aman dan hanya dapat diakses pengguna
+                    terdaftar.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-
-          <div className="flex-grow"></div>
 
           {/* Bantuan Support */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Headphones className="h-7 w-7 text-white/90" />
             <div>
-              <p className="text-sm font-semibold text-white">Butuh bantuan?</p>
-              <p className="text-xs text-blue-100/80">
+              <p className="text-[13px] font-semibold text-white">
+                Butuh bantuan?
+              </p>
+              <p className="text-[11px] text-blue-100/80">
                 Hubungi admin atau tim support.
               </p>
             </div>
@@ -151,42 +181,50 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Kolom Kanan - Form Login */}
-      <div className="relative flex flex-1 flex-col items-center justify-center p-6 lg:p-12">
-        {/* Dekorasi Pola Titik (Dotted Pattern) - OPTIMIZED */}
-        {/* Menghapus maskImage yang berat dirender browser */}
+      {/* --- KOLOM KANAN (FORM LOGIN) --- */}
+      {/* Menggunakan overflow-hidden untuk menjamin tidak ada scroll internal */}
+      <div className="relative flex h-full flex-1 flex-col items-center justify-center p-4 lg:p-6 overflow-hidden">
+        {/* Dekorasi Pola Titik */}
         <div
-          className="absolute right-0 top-0 hidden h-64 w-64 lg:block bg-[radial-gradient(#e5e7eb_2px,transparent_2px)] bg-[size:24px_24px] opacity-50"
+          className="absolute right-4 top-4 hidden h-40 w-40 lg:block xl:right-10 xl:top-10"
+          style={{
+            backgroundImage: "radial-gradient(#cbd5e1 2px, transparent 2px)",
+            backgroundSize: "24px 24px",
+            opacity: 0.5,
+          }}
         ></div>
 
-        <div className="z-10 w-full max-w-[440px]">
+        {/* Max-width form sedikit diperkecil dan padding dikurangi agar fit */}
+        <div className="z-10 w-full max-w-[380px] xl:max-w-[400px]">
           {/* Header Form */}
-          <div className="mb-8 flex flex-col items-center text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2563eb] text-white shadow-lg shadow-blue-600/20">
-              <WrenchIcon className="h-8 w-8" />
+          <div className="mb-6 flex flex-col items-center text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2563eb] text-white shadow-lg shadow-blue-500/20">
+              <WrenchIcon className="h-6 w-6" />
             </div>
-            <h2 className="mt-6 text-2xl font-bold text-gray-900">
+            <h2 className="mt-4 text-[22px] font-bold text-gray-900">
               Bengkel POS & Monitoring
             </h2>
-            <p className="mt-2 text-sm text-gray-500">
+            <p className="mt-1.5 text-[13px] text-gray-500">
               Masuk untuk melanjutkan ke sistem
             </p>
           </div>
 
           {/* Kotak Form */}
-          <div className="rounded-[20px] bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-            <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100/80">
+            {/* space-y-4 agar form lebih merapat */}
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Input Email */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700">
+                <label className="text-[12px] font-semibold text-gray-700">
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="email"
                     required
-                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-11 pr-4 text-sm text-gray-900 transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
+                    // py-2 (diperkecil dari py-2.5) untuk menghemat tinggi form
+                    className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-4 text-[13px] text-gray-900 transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb] bg-gray-50/50"
                     placeholder="Masukkan email Anda"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -196,15 +234,15 @@ export function LoginPage() {
 
               {/* Input Password */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-gray-700">
+                <label className="text-[12px] font-semibold text-gray-700">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required
-                    className="w-full rounded-xl border border-gray-300 py-2.5 pl-11 pr-11 text-sm text-gray-900 transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb]"
+                    className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-9 text-[13px] text-gray-900 transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb] bg-gray-50/50"
                     placeholder="Masukkan password Anda"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -212,31 +250,31 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
               </div>
 
               {/* Remember Me & Lupa Password */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center justify-between pt-0.5">
+                <label className="flex cursor-pointer items-center gap-1.5 text-[12px] text-gray-600">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb]"
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb]"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
                   />
-                  Ingat saya di perangkat ini
+                  Ingat saya
                 </label>
                 <a
                   href="#"
-                  className="text-sm font-semibold text-[#2563eb] hover:underline"
+                  className="text-[12px] font-semibold text-[#2563eb] hover:underline"
                 >
                   Lupa password?
                 </a>
@@ -244,7 +282,7 @@ export function LoginPage() {
 
               {/* Pesan Error */}
               {error && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-100">
+                <div className="rounded-lg bg-red-50 p-2.5 text-[12px] text-red-600 border border-red-100">
                   {error}
                 </div>
               )}
@@ -252,17 +290,17 @@ export function LoginPage() {
               {/* Tombol Masuk */}
               <Button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#2563eb] py-3 text-white hover:bg-blue-700 transition-all font-semibold"
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#2563eb] py-2.5 text-white hover:bg-blue-700 transition-all font-semibold text-[13px]"
                 loading={loading}
               >
-                {!loading && <ArrowRight className="h-5 w-5" />}
+                {!loading && <ArrowRight className="h-4 w-4" />}
                 Masuk
               </Button>
 
               {/* Divider */}
-              <div className="relative flex items-center py-2">
+              <div className="relative flex items-center py-1">
                 <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink-0 px-4 text-xs text-gray-400">
+                <span className="flex-shrink-0 px-3 text-[10px] text-gray-400">
                   atau masuk dengan
                 </span>
                 <div className="flex-grow border-t border-gray-200"></div>
@@ -271,16 +309,16 @@ export function LoginPage() {
               {/* Tombol Login Sebagai Kasir */}
               <button
                 type="button"
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                <Shield className="h-5 w-5 text-gray-500" />
+                <Shield className="h-4 w-4 text-gray-500" />
                 Login sebagai Kasir
               </button>
             </form>
           </div>
 
           {/* Footer Text */}
-          <p className="mt-8 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-[12px] text-gray-500">
             Belum punya akun?{" "}
             <a
               href="#"

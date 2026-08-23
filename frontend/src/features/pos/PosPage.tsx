@@ -16,7 +16,7 @@ import { formatRupiah, formatNumber } from "@/lib/formatters";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
 import { CustomerSelector } from "@/features/pos/CustomerSelector";
-import type { Product, Service, Customer } from "@/types";
+import type { Product, Service, Customer, PaymentMethod } from "@/types";
 import { Search, ShoppingCart, ArrowRight } from "lucide-react";
 
 interface CartLine {
@@ -44,7 +44,7 @@ export function PosPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] =
-    useState<keyof typeof PAYMENT_METHODS>("CASH");
+    useState<PaymentMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);

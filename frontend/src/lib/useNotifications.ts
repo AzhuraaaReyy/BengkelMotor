@@ -94,7 +94,7 @@ export function useNotifications() {
 
   // 60-second periodic poll (only when visible) - increased from 30s
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
+    let timer: ReturnType<typeof setInterval> | number;
     const startTimer = () => {
       timer = window.setInterval(() => {
         if (isVisible) load();

@@ -1,5 +1,5 @@
 import client from "./client";
-import type { ApiResponse, Sale, SaleItem } from "@/types";
+import type { ApiResponse, Sale, SaleItem, PaymentMethod } from "@/types";
 
 export interface CartLineInput {
   item_type: "PRODUCT" | "SERVICE";
@@ -15,7 +15,7 @@ export interface CreateSalePayload {
 }
 
 export interface CheckoutPayload {
-  payment_method: "CASH" | "QRIS" | "VA";
+  payment_method: PaymentMethod;
   paid_amount?: number;
   discount_amount: number;
   is_service?: boolean;

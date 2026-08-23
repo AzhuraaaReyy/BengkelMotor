@@ -29,6 +29,10 @@ Route::prefix('v1')->group(function () {
     Route::post('payments/webhook/midtrans', [PaymentWebhookController::class, 'handle'])
         ->middleware('throttle:30,1');
 
+    // Payment simulation (development only)
+    Route::post('payments/simulate/{saleCode}', [PaymentWebhookController::class, 'simulatePayment'])
+        ->middleware('throttle:10,1');
+
     // Public: auth (web middleware group starts the session so Sanctum SPA
     // cookie auth can persist the logged-in user across requests).
     Route::prefix('auth')->group(function () {

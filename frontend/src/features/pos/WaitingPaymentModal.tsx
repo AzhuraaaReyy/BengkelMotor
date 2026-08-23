@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { getSaleApi } from "@/lib/api/sales";
+import { simulatePaymentApi } from "@/lib/api/payments";
 import { formatRupiah } from "@/lib/formatters";
-import { Copy, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Copy, Clock, CheckCircle, XCircle, CreditCard, Loader2 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { useToast } from "@/components/ui/Toast";
 
 interface Props {
   sale: any;
@@ -16,6 +18,8 @@ interface Props {
 export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [status, setStatus] = useState(sale.status);
+  const [simulating, setSimulating] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (!sale.payment_expires_at) return;
@@ -59,6 +63,23 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
     navigator.clipboard.writeText(sale.gateway_va_number || "");
   };
 
+  const handleSimulatePayment = async () => {
+    if (simulating) return;
+    setSimulating(true);
+    try {
+      await simulatePaymentApi(sale.sale_code);
+      const res = await getSaleApi(sale.id);
+      if (res.status === "PAID") {
+        setStatus("PAID");
+        onPaid(res);
+      }
+    } catch (err) {
+      toast.error("Gagal mensimulasikan pembayaran");
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   return (
     <Modal open onClose={onClose} title="Menunggu Pembayaran" size="lg">
       <div className="space-y-4">
@@ -94,6 +115,26 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
               ) : null}
             </div>
             <p className="text-sm text-gray-500">Buka GoPay / e-wallet / m-banking lalu Scan QRIS</p>
+            {/* Simulasi Bayar button - only in development */}
+            {import.meta.env.DEV && status === "PENDING" && (
+              <button
+                onClick={handleSimulatePayment}
+                disabled={simulating}
+                className="mt-3 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {simulating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mensimulasikan...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4" />
+                    Simulasi Bayar (Dev)
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 
