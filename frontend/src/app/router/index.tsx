@@ -12,6 +12,7 @@ import { ServicesPage } from "@/features/services/ServicesPage";
 import { ExpensesPage } from "@/features/expenses/ExpensesPage";
 import { ReportsPage } from "@/features/reports/ReportsPage";
 import { SalesHistoryPage } from "@/features/sales-history/SalesHistoryPage";
+import { ReceiptPage } from "@/features/sales-history/ReceiptPage";
 import { UsersPage } from "@/features/users/UsersPage";
 import { AuditPage } from "@/features/audit/AuditPage";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
       },
       { path: "pos", element: <PosPage /> },
       { path: "riwayat", element: <SalesHistoryPage /> },
+      { path: "riwayat/:id/struk", element: <ReceiptPage /> },
       { path: "produk", element: <ProductsPage /> },
       { path: "produk/:id", element: <ProductsPage /> },
       { path: "jasa", element: <ServicesPage /> },

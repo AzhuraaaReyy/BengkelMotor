@@ -18,7 +18,6 @@ import { useAuth } from "@/app/auth/AuthContext";
 import { getSalesApi, getSaleApi, voidSaleApi, expireSaleApi } from "@/lib/api/sales";
 import { formatRupiah, formatDateTime, formatNumber } from "@/lib/formatters";
 import { SALE_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/constants";
-import { ReceiptView } from "@/features/pos/ReceiptView";
 import type { Sale } from "@/types";
 
 export function SalesHistoryPage() {
@@ -42,7 +41,10 @@ export function SalesHistoryPage() {
   const [voidTarget, setVoidTarget] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [voidLoading, setVoidLoading] = useState(false);
-  const [receiptSale, setReceiptSale] = useState<Sale | null>(null);
+
+  const [expireTarget, setExpireTarget] = useState<Sale | null>(null);
+  const [expireReason, setExpireReason] = useState("");
+  const [expireLoading, setExpireLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,7 +89,7 @@ export function SalesHistoryPage() {
     setDetailLoading(true);
     try {
       const full = await getSaleApi(sale.id);
-      setReceiptSale(full);
+      navigate(`/riwayat/${full.id}/struk`);
     } catch (e) {
       const err = e as { message?: string };
       toast.error(err.message || "Gagal memuat data struk.");
@@ -121,10 +123,6 @@ export function SalesHistoryPage() {
       setVoidLoading(false);
     }
   };
-
-  const [expireTarget, setExpireTarget] = useState<Sale | null>(null);
-  const [expireReason, setExpireReason] = useState("");
-  const [expireLoading, setExpireLoading] = useState(false);
 
   const openExpire = (sale: Sale) => {
     setExpireReason("");
@@ -471,21 +469,6 @@ export function SalesHistoryPage() {
           />
         }
       />
-
-      <Modal
-        open={!!receiptSale}
-        onClose={() => setReceiptSale(null)}
-        title="Struk Pembayaran"
-        size="lg"
-      >
-        {receiptSale && (
-          <ReceiptView
-            sale={receiptSale}
-            onClose={() => setReceiptSale(null)}
-            customerName={receiptSale.customer?.name ?? ""}
-          />
-        )}
-      </Modal>
     </div>
   );
 }
