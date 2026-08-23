@@ -170,9 +170,13 @@
   header,
   footer,
   aside,
-  .no-print,
-  main > div:not(:has(.thermal-scroll)),
-  body > div:not(:has(.thermal-scroll)) {
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Hide all main content except the receipt container */
+  main > *:not(:has(.thermal-scroll)),
+  body > *:not(:has(.thermal-scroll)) {
     display: none !important;
   }
   
