@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\ServiceOrderController;
 use App\Http\Controllers\Api\AuditController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentWebhookController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,7 @@ Route::prefix('v1')->group(function () {
         Route::put('sales/{sale}', [SaleController::class, 'update']);
         Route::post('sales/{sale}/checkout', [SaleController::class, 'checkout']);
         Route::post('sales/{sale}/void', [SaleController::class, 'void'])->middleware('role:ADMIN');
+        Route::post('sales/{sale}/expire', [SaleController::class, 'expire'])->middleware('role:ADMIN');
 
         // Products
         Route::get('products', [ProductController::class, 'index']);
@@ -61,10 +63,8 @@ Route::prefix('v1')->group(function () {
         Route::get('products/{product}/movements', [ProductController::class, 'movements']);
         Route::post('products', [ProductController::class, 'store'])->middleware('role:ADMIN');
         Route::put('products/{product}', [ProductController::class, 'update'])->middleware('role:ADMIN');
-        // Stock management (adjust/restock) is shared — both roles may manage
-        // stock quantities; only the product master (create/update + Harga
-        // Beli) stays Admin-only (Fase 3).
-        Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock']);
+        // Stock management (adjust/restock) — Admin only
+        Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->middleware('role:ADMIN');
 
         // Services (jasa)
         Route::get('services', [ServiceController::class, 'index']);
@@ -73,9 +73,9 @@ Route::prefix('v1')->group(function () {
 
         // Customers
         Route::get('customers', [CustomerController::class, 'index']);
-        Route::post('customers', [CustomerController::class, 'store']);
         Route::get('customers/{customer}', [CustomerController::class, 'show']);
-        Route::put('customers/{customer}', [CustomerController::class, 'update']);
+        Route::post('customers', [CustomerController::class, 'store'])->middleware('role:ADMIN');
+        Route::put('customers/{customer}', [CustomerController::class, 'update'])->middleware('role:ADMIN');
 
         // Mechanics
         Route::get('mechanics', [MechanicController::class, 'index']);
@@ -84,10 +84,10 @@ Route::prefix('v1')->group(function () {
 
         // Service Orders
         Route::get('service-orders', [ServiceOrderController::class, 'index']);
-        Route::post('service-orders', [ServiceOrderController::class, 'store']);
         Route::get('service-orders/{serviceOrder}', [ServiceOrderController::class, 'show']);
-        Route::put('service-orders/{serviceOrder}', [ServiceOrderController::class, 'update']);
-        Route::delete('service-orders/{serviceOrder}', [ServiceOrderController::class, 'destroy']);
+        Route::post('service-orders', [ServiceOrderController::class, 'store']);
+        Route::put('service-orders/{serviceOrder}', [ServiceOrderController::class, 'update'])->middleware('role:ADMIN');
+        Route::delete('service-orders/{serviceOrder}', [ServiceOrderController::class, 'destroy'])->middleware('role:ADMIN');
 
         // Expenses (Admin only)
         Route::get('expenses', [ExpenseController::class, 'index'])->middleware('role:ADMIN');
@@ -110,5 +110,12 @@ Route::prefix('v1')->group(function () {
 
         // Audit logs (Admin only)
         Route::get('audit-logs', [AuditController::class, 'index'])->middleware('role:ADMIN');
+
+        // Notifications
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
     });
 });
