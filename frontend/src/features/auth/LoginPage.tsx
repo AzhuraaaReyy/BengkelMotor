@@ -4,18 +4,7 @@ import { useAuth } from "@/app/auth/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { WrenchIcon } from "@/components/shared/icons";
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  TrendingUp,
-  Package,
-  ShieldCheck,
-  Headphones,
-  Shield,
-} from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, ShieldCheck } from "lucide-react";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -72,23 +61,20 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
-      {/* Kolom Kiri - Informasi & Visual (Hidden on mobile, visible on desktop) */}
-      <div className="relative hidden w-full max-w-md flex-col justify-between overflow-hidden bg-[#1a4f9c] text-white lg:flex xl:max-w-xl 2xl:max-w-2xl">
-        {/* Background Image Overlay */}
+      {/* Kolom Kiri - Informasi & Visual */}
+      <div className="relative hidden w-full max-w-md flex-col justify-between overflow-hidden bg-[#0d2a5c] text-white lg:flex xl:max-w-xl 2xl:max-w-2xl">
+        {/* Background Image Overlay (OPTIMIZED) */}
         <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?auto=format&fit=crop&q=80"
-            alt="Bengkel Background"
-            className="h-full w-full object-cover opacity-20 mix-blend-overlay"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1a4f9c]/90 to-[#0d2a5c]/95 mix-blend-multiply"></div>
+          {/* Background Gradient (NO EXTERNAL IMAGE - FAST LOAD) */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0d2a5c] via-[#1a4f9c] to-[#0d2a5c]"></div>
         </div>
 
         {/* Konten Kolom Kiri */}
         <div className="relative z-10 flex h-full flex-col p-12 lg:p-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/30 backdrop-blur-sm">
+            {/* Menghapus backdrop-blur yang berat */}
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500/40">
               <WrenchIcon className="h-6 w-6 text-white" />
             </div>
             <div className="leading-tight">
@@ -167,16 +153,10 @@ export function LoginPage() {
 
       {/* Kolom Kanan - Form Login */}
       <div className="relative flex flex-1 flex-col items-center justify-center p-6 lg:p-12">
-        {/* Dekorasi Pola Titik (Dotted Pattern) di Pojok Kanan Atas */}
+        {/* Dekorasi Pola Titik (Dotted Pattern) - OPTIMIZED */}
+        {/* Menghapus maskImage yang berat dirender browser */}
         <div
-          className="absolute right-0 top-0 hidden h-64 w-64 lg:block"
-          style={{
-            backgroundImage: "radial-gradient(#d1d5db 2px, transparent 2px)",
-            backgroundSize: "20px 20px",
-            opacity: 0.4,
-            maskImage:
-              "radial-gradient(ellipse at top right, black, transparent)",
-          }}
+          className="absolute right-0 top-0 hidden h-64 w-64 lg:block bg-[radial-gradient(#e5e7eb_2px,transparent_2px)] bg-[size:24px_24px] opacity-50"
         ></div>
 
         <div className="z-10 w-full max-w-[440px]">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   getNotificationsApi,
@@ -7,6 +7,7 @@ import {
   markAllAsReadApi,
 } from "@/lib/api/notifications";
 import type { Notification, NotificationCounts } from "@/types";
+import { useVisibility } from "./useVisibility";
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -17,6 +18,7 @@ export function useNotifications() {
   });
   const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const { isVisible, subscribe } = useVisibility();
 
   const load = useCallback(async () => {
     try {
@@ -68,38 +70,43 @@ export function useNotifications() {
     }
   }, []);
 
+  // Debounced refresh to prevent rapid successive calls
+  const refreshDebounced = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refresh = useCallback(() => {
+    if (refreshDebounced.current) return;
+    refreshDebounced.current = setTimeout(() => {
+      refreshDebounced.current = null;
+      load();
+    }, 500);
+  }, [load]);
+
   // Initial load + navigation-based refresh
   useEffect(() => {
     load();
   }, [load, location.pathname]);
 
-  // Refresh on tab focus (visibility API)
+  // Refresh on tab focus (visibility API) - using shared listener
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") load();
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [load]);
+    return subscribe((visible) => {
+      if (visible) load();
+    });
+  }, [load, subscribe]);
 
-  // 30-second periodic poll (only when visible)
+  // 60-second periodic poll (only when visible) - increased from 30s
   useEffect(() => {
-    let timer: number;
+    let timer: ReturnType<typeof setInterval>;
     const startTimer = () => {
       timer = window.setInterval(() => {
-        if (document.visibilityState === "visible") load();
-      }, 30_000);
+        if (isVisible) load();
+      }, 60_000); // 60 seconds instead of 30
     };
     const stopTimer = () => window.clearInterval(timer);
-    if (document.visibilityState === "visible") startTimer();
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") startTimer();
+    if (isVisible) startTimer();
+    return subscribe((visible) => {
+      if (visible) startTimer();
       else stopTimer();
     });
-    return () => {
-      stopTimer();
-    };
-  }, [load]);
+  }, [load, subscribe, isVisible]);
 
-  return { notifications, unreadCounts, loading, markAsRead, markAllAsRead, refresh: load };
+  return { notifications, unreadCounts, loading, markAsRead, markAllAsRead, refresh };
 }

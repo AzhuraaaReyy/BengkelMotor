@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getLowStockApi } from "@/lib/api/products";
 import type { LowStockCounts, LowStockItem } from "@/types";
+import { useVisibility } from "./useVisibility";
 
 // Shared low-stock state for the banner + topbar bell (Fase 3.2).
 // Refreshed on mount, on navigation, on tab focus (via visibility API),
@@ -15,6 +16,7 @@ export function useLowStock() {
   });
   const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const { isVisible, subscribe } = useVisibility();
 
   const load = useCallback(async () => {
     try {
@@ -37,41 +39,27 @@ export function useLowStock() {
 
   // Visibility-based refresh: load when tab becomes visible
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        load();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [load]);
+    return subscribe((visible) => {
+      if (visible) load();
+    });
+  }, [load, subscribe]);
 
   // Periodic poll: 5 minutes (only when tab is visible via visibility gate)
   useEffect(() => {
-    let timer: number;
+    let timer: ReturnType<typeof setInterval>;
     const startTimer = () => {
       timer = window.setInterval(() => {
-        if (document.visibilityState === "visible") {
-          load();
-        }
+        if (isVisible) load();
       }, 5 * 60_000); // 5 minutes
     };
     const stopTimer = () => window.clearInterval(timer);
 
-    if (document.visibilityState === "visible") {
-      startTimer();
-    }
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        startTimer();
-      } else {
-        stopTimer();
-      }
+    if (isVisible) startTimer();
+    return subscribe((visible) => {
+      if (visible) startTimer();
+      else stopTimer();
     });
-    return () => {
-      stopTimer();
-    };
-  }, [load]);
+  }, [load, subscribe, isVisible]);
 
   return { items, counts, loading };
 }
