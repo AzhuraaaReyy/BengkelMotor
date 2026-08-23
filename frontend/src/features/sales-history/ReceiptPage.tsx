@@ -15,6 +15,7 @@ export function ReceiptPage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -39,6 +40,19 @@ export function ReceiptPage() {
 
     fetchSale();
   }, [id]);
+
+  // Auto-print when sale is loaded
+  useEffect(() => {
+    if (sale && !loading && !error && !isPrinting) {
+      setIsPrinting(true);
+      // Small delay to ensure DOM is ready for print
+      setTimeout(() => {
+        window.print();
+        // Navigate back to history after print dialog closes
+        setTimeout(() => navigate("/riwayat"), 500);
+      }, 300);
+    }
+  }, [sale, loading, error, isPrinting, navigate]);
 
   const handleBack = () => {
     navigate("/riwayat");
