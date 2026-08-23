@@ -168,9 +168,17 @@
 @media print {
   /* Hide UI elements that shouldn't print */
   header,
+  footer,
   aside,
   .no-print,
-  main > div:not(.thermal-scroll) {
+  main > div:not(.thermal-scroll),
+  .fixed.inset-0 > header,
+  .fixed.inset-0 > footer {
+    display: none !important;
+  }
+  
+  /* Hide modal backdrop and non-receipt content in modals */
+  .fixed.inset-0.bg-black\/40 {
     display: none !important;
   }
   
