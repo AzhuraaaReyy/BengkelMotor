@@ -16,11 +16,14 @@ class StockNotificationService
      * active users when the stock is below the threshold and no unread
      * STOCK notification already exists for that product+user.
      */
-    public function check(Product $product): void
+    public function check(Product $product, ?int $currentStock = null): void
     {
-        $product->refresh();
+        if ($currentStock === null) {
+            $product->refresh();
+            $currentStock = $product->current_stock;
+        }
 
-        if ($product->current_stock >= self::STOCK_THRESHOLD) {
+        if ($currentStock >= self::STOCK_THRESHOLD) {
             return;
         }
 
@@ -32,19 +35,19 @@ class StockNotificationService
                 continue;
             }
 
-            $isOut = $product->current_stock === 0;
+            $isOut = $currentStock === 0;
             $title = $isOut ? 'Stok Habis' : 'Stok Menipis';
             $message = sprintf(
                 'Produk %s tersisa %d %s',
                 $product->name,
-                $product->current_stock,
+                $currentStock,
                 $product->unit,
             );
 
             $this->notification->create($user, 'STOCK', $title, $message, [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'current_stock' => $product->current_stock,
+                'current_stock' => $currentStock,
                 'min_stock' => self::STOCK_THRESHOLD,
                 'unit' => $product->unit,
             ]);

@@ -94,15 +94,15 @@ class AdjustStockService
             }
 
             $product = $product->refresh();
-            $this->checkStockNotification($product);
+            $this->checkStockNotification($product, (int) $product->current_stock);
 
             return $product;
         }, 5);
     }
 
-    private function checkStockNotification(Product $product): void
+    private function checkStockNotification(Product $product, int $currentStock): void
     {
-        $this->stockNotification->check($product);
+        $this->stockNotification->check($product, $currentStock);
     }
 
     private function createPurchaseExpense(

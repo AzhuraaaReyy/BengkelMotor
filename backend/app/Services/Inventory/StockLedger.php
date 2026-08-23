@@ -44,13 +44,9 @@ class StockLedger
                 'created_by' => $userId,
                 'created_at' => now(),
             ]);
-        }
 
-        foreach ($productItems as $item) {
-            $product = $locked->get($item->product_id);
-            if ($product) {
-                $this->stockNotification->check($product);
-            }
+            // Check stock notification immediately after save with known $after value
+            $this->stockNotification->check($product, $after);
         }
     }
 
