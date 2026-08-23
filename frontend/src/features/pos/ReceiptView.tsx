@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { PrinterIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
@@ -17,14 +17,27 @@ export function ReceiptView({
   const lastPrintTimeRef = useRef<number>(0);
 
   const handlePrint = () => {
-    const now = Date.now();
-    // Prevent duplicate prints using timestamp-based cooldown (3 seconds)
-    if (Date.now() - lastPrintTimeRef.current < 3000) {
+    // Global check to prevent any duplicate prints in this session
+    if (sessionStorage.getItem('receipt_printed') === 'true') {
       return;
     }
-    lastPrintTimeRef.current = now;
+    
+    // Prevent rapid successive prints (3 second cooldown)
+    if (Date.now() - (lastPrintTimeRef.current || 0) < 3000) {
+      return;
+    }
+    
+    lastPrintTimeRef.current = Date.now();
+    sessionStorage.setItem('receipt_printed', 'true');
     window.print();
   };
+
+  // Clean up session storage on unmount
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('receipt_printed');
+    };
+  }, []);
 
   const renderPaymentDetail = () => {
     const method = sale.payment_method;
