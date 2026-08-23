@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\MechanicResource;
 use App\Models\Mechanic;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,8 @@ class MechanicController extends Controller
             ->when($request->boolean('active_only'), fn($q) => $q->where('is_active', true))
             ->when($request->search, fn($q, $s) => $q->where('name', 'like', '%' . str_replace(['%', '_'], ['\\%', '\\_'], $s) . '%'))
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(15)
+            ->through(fn (Mechanic $mechanic) => new MechanicResource($mechanic));
 
         return response()->json(['data' => $mechanics]);
     }
@@ -32,7 +34,7 @@ class MechanicController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
-        return response()->json(['data' => $mechanic, 'message' => 'Mekanik dibuat.'], 201);
+        return response()->json(['data' => new MechanicResource($mechanic), 'message' => 'Mekanik dibuat.'], 201);
     }
 
     public function update(Request $request, Mechanic $mechanic)
@@ -44,6 +46,6 @@ class MechanicController extends Controller
         ]);
 
         $mechanic->update($validated);
-        return response()->json(['data' => $mechanic, 'message' => 'Mekanik diperbarui.']);
+        return response()->json(['data' => new MechanicResource($mechanic), 'message' => 'Mekanik diperbarui.']);
     }
 }

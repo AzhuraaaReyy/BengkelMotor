@@ -34,13 +34,12 @@ class MidtransGateway implements PaymentGateway
                 'quantity' => $i['quantity'],
             ], $request->items),
             'customer_details' => $request->customer ?? new \stdClass(),
-            'expiry' => ['unit' => 'minutes', 'duration' => 15],
+            'expiry' => ['unit' => 'minutes', 'duration' => 10],
         ];
 
         $payload['payment_type'] = match ($request->method) {
             'QRIS' => 'qris',
             'VA' => 'bank_transfer',
-            'GOPAY' => 'gopay',
             default => throw new RuntimeException("Unsupported method: {$request->method}", 422),
         };
         if ($payload['payment_type'] === 'bank_transfer') {
@@ -79,7 +78,7 @@ class MidtransGateway implements PaymentGateway
             qrString: $qrString,
             vaNumber: $body['va_numbers'][0]['va_number'] ?? null,
             deepLink: $deepLink,
-            expiresAt: isset($body['expiry_time']) ? new \DateTime($body['expiry_time']) : now()->addMinutes(15),
+            expiresAt: isset($body['expiry_time']) ? new \DateTime($body['expiry_time']) : now()->addMinutes(10),
         );
     }
 

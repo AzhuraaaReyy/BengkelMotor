@@ -15,7 +15,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SaleStatusBadge } from "@/components/ui/badges";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/app/auth/AuthContext";
-import { getSalesApi, getSaleApi, voidSaleApi } from "@/lib/api/sales";
+import { getSalesApi, getSaleApi, voidSaleApi, expireSaleApi } from "@/lib/api/sales";
 import { formatRupiah, formatDateTime, formatNumber } from "@/lib/formatters";
 import { SALE_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/constants";
 import { ReceiptView } from "@/features/pos/ReceiptView";
@@ -109,6 +109,32 @@ export function SalesHistoryPage() {
     }
   };
 
+  const [expireTarget, setExpireTarget] = useState<Sale | null>(null);
+  const [expireReason, setExpireReason] = useState("");
+  const [expireLoading, setExpireLoading] = useState(false);
+
+  const openExpire = (sale: Sale) => {
+    setExpireReason("");
+    setExpireTarget(sale);
+  };
+
+  const confirmExpire = async () => {
+    if (!expireTarget) return;
+    setExpireLoading(true);
+    try {
+      await expireSaleApi(expireTarget.id, expireReason.trim() || "Dikedaluwaskan manual oleh admin.");
+      toast.success(`Transaksi ${expireTarget.sale_code} berhasil dikedaluwaskan.`);
+      setExpireTarget(null);
+      setDetail(null);
+      load();
+    } catch (e) {
+      const err = e as { message?: string };
+      toast.error(err.message || "Gagal mengedaluwaskan transaksi.");
+    } finally {
+      setExpireLoading(false);
+    }
+  };
+
   const columns: Column<Sale>[] = [
     {
       key: "sale_code",
@@ -121,30 +147,6 @@ export function SalesHistoryPage() {
       key: "paid_at",
       label: "Tanggal",
       render: (r) => (r.paid_at ? formatDateTime(r.paid_at) : "-"),
-    },
-    {
-      key: "cashier",
-      label: "Kasir",
-      render: (r) => r.cashier?.name || "-",
-    },
-    {
-      key: "customer",
-      label: "Pelanggan",
-      render: (r) => r.customer?.name || "-",
-    },
-    {
-      key: "payment_method",
-      label: "Pembayaran",
-      render: (r) => (r.payment_method ? PAYMENT_LABEL[r.payment_method] : "-"),
-    },
-    {
-      key: "grand_total",
-      label: "Total",
-      render: (r) => (
-        <span className="font-semibold text-text-primary">
-          {formatRupiah(r.grand_total)}
-        </span>
-      ),
     },
     {
       key: "status",
@@ -202,7 +204,7 @@ export function SalesHistoryPage() {
               }}
               options={[
                 { value: "", label: "Semua Status" },
-                ...(["DRAFT", "PENDING", "PAID", "EXPIRED", "VOID"] as const).map((s) => ({
+                ...(["PENDING", "PAID", "EXPIRED", "VOID"] as const).map((s) => ({
                   value: s,
                   label: SALE_STATUS_LABEL[s],
                 })),
@@ -249,19 +251,7 @@ export function SalesHistoryPage() {
                   </div>
                   <SaleStatusBadge status={s.status} />
                 </div>
-                <div className="flex items-center justify-between gap-2 text-xs text-text-secondary">
-                  <div className="min-w-0">
-                    <p className="truncate">Kasir: {s.cashier?.name || "-"}</p>
-                    <p className="truncate">Pelanggan: {s.customer?.name || "-"}</p>
-                  </div>
-                  <p className="shrink-0 text-sm font-semibold text-text-primary">
-                    {formatRupiah(s.grand_total)}
-                  </p>
-                </div>
                 <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-                  <span className="rounded-control bg-surface-2 px-2 py-0.5 text-xs text-text-secondary">
-                    {s.payment_method ? PAYMENT_LABEL[s.payment_method] : "-"}
-                  </span>
                   <div className="flex shrink-0 gap-1">
                     <Button variant="ghost" size="sm" onClick={() => openDetail(s)}>
                       Detail
@@ -344,6 +334,26 @@ export function SalesHistoryPage() {
               </div>
             )}
 
+            {detail.status === "PENDING" && (
+              <div className="rounded-control bg-warning-subtle px-3 py-2 text-sm text-warning">
+                Pembayaran masih menunggu. Silakan lanjutkan pembayaran atau tunggu hingga kedaluwarsa.
+              </div>
+            )}
+
+            {detail.status === "EXPIRED" && (
+              <div className="rounded-control bg-surface-2 px-3 py-2 text-sm text-text-secondary">
+                Pembayaran kedaluwarsa. Stok telah dikembalikan otomatis.
+              </div>
+            )}
+
+            {detail.status === "PENDING" && (
+              <div className="flex justify-end">
+                <Button variant="primary" onClick={() => navigate(`/pos?resume_payment=${detail.id}`)}>
+                  Lanjutkan Pembayaran
+                </Button>
+              </div>
+            )}
+
             {detailLoading ? (
               <LoadingState />
             ) : (
@@ -385,6 +395,14 @@ export function SalesHistoryPage() {
               </div>
             </div>
 
+            {detail.status === "PENDING" && isAdmin && (
+              <div className="flex justify-end">
+                <Button variant="danger" onClick={() => openExpire(detail)}>
+                  Kedaluwaskan
+                </Button>
+              </div>
+            )}
+
             {detail.status === "PAID" && (
               <div className="flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setReceiptSale(detail)}>
@@ -417,6 +435,26 @@ export function SalesHistoryPage() {
             value={voidReason}
             onChange={(e) => setVoidReason(e.target.value)}
             placeholder="Contoh: Pelanggan salah bayar"
+          />
+        }
+      />
+
+      <ConfirmDialog
+        open={!!expireTarget}
+        title={`Kedaluwaskan Transaksi ${expireTarget?.sale_code ?? ""}?`}
+        message="Pembayaran akan dikedaluwaskan dan stok sparepart akan dikembalikan. Transaksi tidak dapat dilanjutkan lagi."
+        confirmLabel="Kedaluwaskan"
+        danger
+        loading={expireLoading}
+        onConfirm={confirmExpire}
+        onCancel={() => setExpireTarget(null)}
+        extra={
+          <Input
+            label="Alasan (opsional)"
+            name="expire_reason"
+            value={expireReason}
+            onChange={(e) => setExpireReason(e.target.value)}
+            placeholder="Contoh: Pelanggan tidak membayar hingga batas waktu"
           />
         }
       />

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createCustomerApi, type CustomerPayload } from "@/lib/api/customers";
 import type { Customer } from "@/types";
+import { ChevronDown } from "lucide-react";
 
 interface CustomerSelectorProps {
   customers: Customer[];
@@ -32,6 +33,9 @@ export function CustomerSelector({
   const [motorcycleType, setMotorcycleType] = useState("");
   const [complaint, setComplaint] = useState("");
   const [diagnosisNote, setDiagnosisNote] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedCustomer = customers.find((c) => c.id === selectedId);
 
@@ -50,6 +54,27 @@ export function CustomerSelector({
       });
     }
   }, [complaint, diagnosisNote, motorcycleType, onServiceDataChange]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+        setSearchQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.phone && c.phone.toLowerCase().includes(q))
+    );
+  }, [customers, searchQuery]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -161,18 +186,68 @@ export function CustomerSelector({
     <div className="space-y-3">
       <div>
         <label className="form-label">Pelanggan</label>
-        <select
-          className="form-input"
-          value={selectedId ?? ""}
-          onChange={(e) => onSelect(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">Pelanggan Umum</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}{c.phone ? ` (${c.phone})` : ""}
-            </option>
-          ))}
-        </select>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="form-input flex items-center justify-between"
+          >
+            <span className="truncate">
+              {selectedCustomer
+                ? `${selectedCustomer.name}${selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ""}`
+                : "Pelanggan Umum"}
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-text-secondary transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full rounded-control border border-border bg-surface shadow-card">
+              <div className="p-2">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari nama / no. HP..."
+                  className="w-full rounded-control border border-border bg-surface px-3 py-1.5 text-sm text-text-primary placeholder:text-text-secondary/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  autoFocus
+                />
+              </div>
+              <div className="hide-scrollbar max-h-[160px] overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelect(null);
+                    setDropdownOpen(false);
+                    setSearchQuery("");
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
+                    !selectedId ? "bg-primary/5 text-primary font-medium" : "text-text-primary"
+                  }`}
+                >
+                  Pelanggan Umum
+                </button>
+                {filteredCustomers.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(c.id);
+                      setDropdownOpen(false);
+                      setSearchQuery("");
+                    }}
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-surface-2 ${
+                      selectedId === c.id ? "bg-primary/5 text-primary font-medium" : "text-text-primary"
+                    }`}
+                  >
+                    {c.name}{c.phone ? ` (${c.phone})` : ""}
+                  </button>
+                ))}
+                {filteredCustomers.length === 0 && (
+                  <p className="px-3 py-2 text-xs text-text-secondary">Tidak ditemukan</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setShowForm(true)}

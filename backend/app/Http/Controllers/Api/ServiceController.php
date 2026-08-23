@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ServiceResource;
 use App\Models\AuditLog;
 use App\Models\Service;
 use App\Services\Audit\AuditService;
@@ -27,7 +28,8 @@ class ServiceController extends Controller
                 $qq->where('name', 'like', "%{$s}%")->orWhere('code', 'like', "%{$s}%")
             ))
             ->orderBy('name')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->through(fn (Service $service) => new ServiceResource($service));
 
         return response()->json(['data' => $services]);
     }
@@ -55,7 +57,7 @@ class ServiceController extends Controller
             ['name' => $service->name, 'sale_price' => $service->sale_price]
         );
 
-        return response()->json(['data' => $service, 'message' => 'Jasa dibuat.'], 201);
+        return response()->json(['data' => new ServiceResource($service), 'message' => 'Jasa dibuat.'], 201);
     }
 
     public function update(Request $request, Service $service)
@@ -77,6 +79,6 @@ class ServiceController extends Controller
             $service->only(['name', 'sale_price', 'is_active'])
         );
 
-        return response()->json(['data' => $service, 'message' => 'Jasa diperbarui.']);
+        return response()->json(['data' => new ServiceResource($service), 'message' => 'Jasa diperbarui.']);
     }
 }

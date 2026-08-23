@@ -73,3 +73,108 @@
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ===== Thermal Receipt Styles ===== */
+.thermal-receipt {
+  width: 100%;
+  max-width: 320px;           /* 80mm thermal width */
+  margin: 0 auto;             /* Center on desktop/tablet */
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+.thermal-receipt .section-divider {
+  border-top: 1px dashed #d0d0d0;
+  margin: 6px 0;
+}
+
+.thermal-receipt .section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 8px 0 4px;
+  color: #1a1a1a;
+}
+
+.thermal-receipt .kv-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin: 2px 0;
+}
+
+.thermal-receipt .kv-label { color: #6b6b6b; }
+.thermal-receipt .kv-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #1a1a1a;
+}
+
+.thermal-receipt .item-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px dashed #d0d0d0;
+}
+
+.thermal-receipt .item-name { color: #1a1a1a; }
+.thermal-receipt .item-qty-price { color: #6b6b6b; font-size: 10px; }
+.thermal-receipt .item-total {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #1a1a1a;
+}
+
+.thermal-receipt .total-row {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1b3a2f;
+  border-top: 2px solid #1b3a2f;
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.thermal-receipt .footer-note {
+  font-size: 9px;
+  color: #6b6b6b;
+  text-align: center;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* Scroll container - hide scrollbar */
+.thermal-scroll {
+  max-height: calc(100vh - 48px); /* Reserve space for buttons */
+  overflow-y: auto;
+  -ms-overflow-style: none;      /* IE/Edge */
+  scrollbar-width: none;         /* Firefox */
+}
+.thermal-scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+/* Print: thermal 80mm, no margins, no buttons */
+@media print {
+  .thermal-receipt {
+    max-width: none;
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+  }
+  .thermal-scroll { max-height: none; overflow: visible; }
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  @page { margin: 0; size: 80mm auto; }
+}

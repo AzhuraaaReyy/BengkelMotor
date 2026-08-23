@@ -1,18 +1,16 @@
 import { PAYMENT_METHODS, PAYMENT_LABEL } from "@/lib/constants";
-import { ShoppingCart, QrCode, Building2, Wallet } from "lucide-react";
+import { ShoppingCart, QrCode, Building2 } from "lucide-react";
 
 const ICONS = {
   CASH: ShoppingCart,
   QRIS: QrCode,
   VA: Building2,
-  GOPAY: Wallet,
 };
 
 const HELPERS = {
   CASH: "Bayar langsung di kasir",
   QRIS: "Pindai QR dari e-wallet / m-banking",
   VA: "Bayar lewat ATM / mobile banking",
-  GOPAY: "Bayar lewat GoPay",
 };
 
 interface Props {
@@ -22,7 +20,7 @@ interface Props {
 
 export function PaymentMethodSelector({ value, onChange }: Props) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className="grid grid-cols-3 gap-2 md:gap-3">
       {Object.values(PAYMENT_METHODS).map((method) => {
         const Icon = ICONS[method as keyof typeof ICONS];
         const isSelected = value === method;

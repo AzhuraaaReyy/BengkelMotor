@@ -15,7 +15,7 @@ export interface CreateSalePayload {
 }
 
 export interface CheckoutPayload {
-  payment_method: "CASH" | "QRIS" | "VA" | "GOPAY";
+  payment_method: "CASH" | "QRIS" | "VA";
   paid_amount?: number;
   discount_amount: number;
   is_service?: boolean;
@@ -76,6 +76,13 @@ export async function checkoutSaleApi(
 
 export async function voidSaleApi(id: number, reason: string): Promise<Sale> {
   const { data } = await client.post<ApiResponse<Sale>>(`/sales/${id}/void`, {
+    reason,
+  });
+  return data.data;
+}
+
+export async function expireSaleApi(id: number, reason?: string): Promise<Sale> {
+  const { data } = await client.post<ApiResponse<Sale>>(`/sales/${id}/expire`, {
     reason,
   });
   return data.data;

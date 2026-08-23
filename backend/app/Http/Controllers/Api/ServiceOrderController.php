@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ServiceOrderResource;
 use App\Models\AuditLog;
 use App\Models\ServiceOrder;
 use App\Services\Audit\AuditService;
@@ -30,7 +31,8 @@ class ServiceOrderController extends Controller
             })
             ->when($request->from && $request->to, fn($q) => $q->whereBetween('opened_at', [$request->from, $request->to]))
             ->orderByDesc('opened_at')
-            ->paginate(15);
+            ->paginate(15)
+            ->through(fn (ServiceOrder $order) => new ServiceOrderResource($order));
 
         return response()->json(['data' => $orders]);
     }
@@ -68,13 +70,13 @@ class ServiceOrderController extends Controller
         ]);
 
         $order->load(['customer:id,name', 'mechanic:id,name']);
-        return response()->json(['data' => $order, 'message' => 'Order servis dibuat.'], 201);
+        return response()->json(['data' => new ServiceOrderResource($order), 'message' => 'Order servis dibuat.'], 201);
     }
 
     public function show(ServiceOrder $serviceOrder)
     {
         $serviceOrder->load(['customer', 'mechanic', 'cashier:id,name', 'sale:id,sale_code,status,grand_total,paid_at']);
-        return response()->json(['data' => $serviceOrder]);
+        return response()->json(['data' => new ServiceOrderResource($serviceOrder)]);
     }
 
     public function update(Request $request, ServiceOrder $serviceOrder)
@@ -102,7 +104,7 @@ class ServiceOrderController extends Controller
 
         $serviceOrder->update($validated);
         $serviceOrder->load(['customer:id,name', 'mechanic:id,name']);
-        return response()->json(['data' => $serviceOrder, 'message' => 'Order servis diperbarui.']);
+        return response()->json(['data' => new ServiceOrderResource($serviceOrder), 'message' => 'Order servis diperbarui.']);
     }
 
     public function destroy(Request $request, ServiceOrder $serviceOrder)

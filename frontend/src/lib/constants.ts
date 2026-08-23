@@ -35,7 +35,6 @@ export const PAYMENT_METHODS: Record<PaymentMethod, PaymentMethod> = {
   CASH: "CASH",
   QRIS: "QRIS",
   VA: "VA",
-  GOPAY: "GOPAY",
 };
 
 export const STOCK_MOVEMENT_TYPES: Record<
@@ -69,7 +68,6 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   CASH: "Tunai",
   QRIS: "QRIS",
   VA: "Virtual Account",
-  GOPAY: "GoPay",
 };
 
 export const STOCK_MOVEMENT_LABEL: Record<StockMovementType, string> = {
@@ -96,3 +94,10 @@ export const EXPENSE_CATEGORIES = [
   "Perawatan Bengkel",
   "Lainnya",
 ] as const;
+
+// Bengkel config (from env)
+export const BENGKEL_CONFIG = {
+  NAMA: import.meta.env.VITE_BENGKEL_NAMA ?? "BENGKEL PUTRA MOTOR",
+  ALAMAT: import.meta.env.VITE_BENGKEL_ALAMAT ?? "Jl. Contoh Alamat Bengkel",
+  TAGLINE: "Service Motor · Sparepart · Perawatan",
+} as const;

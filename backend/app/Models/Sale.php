@@ -51,8 +51,7 @@ class Sale extends Model
     public const PAYMENT_CASH = 'CASH';
     public const PAYMENT_QRIS = 'QRIS';
     public const PAYMENT_VA = 'VA';
-    public const PAYMENT_GOPAY = 'GOPAY';
-    public const ONLINE_METHODS = [self::PAYMENT_QRIS, self::PAYMENT_VA, self::PAYMENT_GOPAY];
+    public const ONLINE_METHODS = [self::PAYMENT_QRIS, self::PAYMENT_VA];
 
     public function cashier()
     {

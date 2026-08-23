@@ -23,7 +23,7 @@ class FakePaymentGateway implements PaymentGateway
                 qrString: 'QR:' . $request->orderId,
                 deepLink: null,
                 vaNumber: null,
-                expiresAt: now()->addMinutes(15),
+                expiresAt: now()->addMinutes(10),
             ),
             'VA' => new GatewayCharge(
                 gatewayTransactionId: 'TX-VA-' . $request->orderId,
@@ -32,16 +32,7 @@ class FakePaymentGateway implements PaymentGateway
                 qrString: null,
                 deepLink: null,
                 vaNumber: '1234567890',
-                expiresAt: now()->addMinutes(15),
-            ),
-            'GOPAY' => new GatewayCharge(
-                gatewayTransactionId: 'TX-GP-' . $request->orderId,
-                method: 'GOPAY',
-                qrUrl: null,
-                qrString: null,
-                deepLink: 'gopay://pay/' . $request->orderId,
-                vaNumber: null,
-                expiresAt: now()->addMinutes(15),
+                expiresAt: now()->addMinutes(10),
             ),
         };
     }

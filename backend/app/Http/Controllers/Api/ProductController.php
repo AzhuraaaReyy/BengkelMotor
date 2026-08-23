@@ -88,7 +88,7 @@ class ProductController extends Controller
         $limit = min(max($request->integer('limit', 100), 1), 500);
 
         $products = Product::where('is_active', true)
-            ->where('current_stock', '<', 5)
+            ->whereColumn('current_stock', '<=', 'min_stock')
             ->orderBy('current_stock')
             ->limit($limit)
             ->get()
@@ -249,3 +249,5 @@ class ProductController extends Controller
         }
     }
 }
+
+

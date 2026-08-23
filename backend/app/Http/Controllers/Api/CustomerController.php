@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,8 @@ class CustomerController extends Controller
                 $qq->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%")
             ))
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(15)
+            ->through(fn (Customer $customer) => new CustomerResource($customer));
 
         return response()->json(['data' => $customers]);
     }
@@ -30,12 +32,12 @@ class CustomerController extends Controller
         ]);
 
         $customer = Customer::create($validated);
-        return response()->json(['data' => $customer, 'message' => 'Pelanggan dibuat.'], 201);
+        return response()->json(['data' => new CustomerResource($customer), 'message' => 'Pelanggan dibuat.'], 201);
     }
 
     public function show(Customer $customer)
     {
-        return response()->json(['data' => $customer]);
+        return response()->json(['data' => new CustomerResource($customer)]);
     }
 
     public function update(Request $request, Customer $customer)
@@ -48,6 +50,6 @@ class CustomerController extends Controller
         ]);
 
         $customer->update($validated);
-        return response()->json(['data' => $customer, 'message' => 'Pelanggan diperbarui.']);
+        return response()->json(['data' => new CustomerResource($customer), 'message' => 'Pelanggan diperbarui.']);
     }
 }

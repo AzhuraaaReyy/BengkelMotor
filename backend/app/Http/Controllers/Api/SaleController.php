@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\SaleResource;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\Payments\PaymentService;
 use App\Services\Sales\CheckoutSaleService;
 use App\Services\Sales\VoidSaleService;
 use App\Support\CodeGenerator;
@@ -18,7 +19,8 @@ class SaleController extends Controller
 {
     public function __construct(
         private CheckoutSaleService $checkoutService,
-        private VoidSaleService $voidService
+        private VoidSaleService $voidService,
+        private PaymentService $paymentService
     ) {}
 
     public function index(Request $request)
@@ -95,7 +97,7 @@ class SaleController extends Controller
 
     public function show(Sale $sale)
     {
-        $sale->load(['items', 'cashier:id,name', 'customer:id,name']);
+        $sale->load(['items', 'cashier:id,name', 'customer:id,name', 'latestCharge']);
         return response()->json(['data' => new SaleResource($sale)]);
     }
 
@@ -154,7 +156,7 @@ $request->validate([
     public function checkout(Request $request, Sale $sale)
     {
         $validated = $request->validate([
-            'payment_method' => ['required', 'in:CASH,QRIS,VA,GOPAY'],
+            'payment_method' => ['required', 'in:CASH,QRIS,VA'],
             'paid_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'customer_id' => ['nullable', 'exists:customers,id'],
@@ -183,14 +185,16 @@ $request->validate([
                 $validated['motorcycle_type'] ?? null,
             );
 
-            $paid->load(['items', 'cashier:id,name', 'customer:id,name']);
+            $paid->load(['items', 'cashier:id,name', 'customer:id,name', 'latestCharge']);
             return response()->json(['data' => new SaleResource($paid), 'message' => 'Pembayaran berhasil.']);
         } catch (RuntimeException $e) {
+            $status = $e->getCode();
+            $status = ($status >= 400 && $status <= 599) ? $status : 422;
             return response()->json([
                 'message' => $e->getMessage(),
                 'code' => 'CHECKOUT_FAILED',
                 'errors' => [],
-            ], $e->getCode() ?: 422);
+            ], $status);
         }
     }
 
@@ -205,11 +209,34 @@ $request->validate([
             $voided->load(['items', 'cashier:id,name', 'customer:id,name']);
             return response()->json(['data' => new SaleResource($voided), 'message' => 'Transaksi berhasil di-void.']);
         } catch (RuntimeException $e) {
+            $status = $e->getCode();
+            $status = ($status >= 400 && $status <= 599) ? $status : 422;
             return response()->json([
                 'message' => $e->getMessage(),
                 'code' => 'VOID_FAILED',
                 'errors' => [],
-            ], $e->getCode() ?: 422);
+            ], $status);
+        }
+    }
+
+    public function expire(Request $request, Sale $sale)
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $expired = $this->paymentService->expire($sale, $validated['reason'] ?? 'Dikedaluwaskan manual oleh admin.');
+            $expired->load(['items', 'cashier:id,name', 'customer:id,name', 'latestCharge']);
+            return response()->json(['data' => new SaleResource($expired), 'message' => 'Transaksi berhasil dikedaluwaskan.']);
+        } catch (RuntimeException $e) {
+            $status = $e->getCode();
+            $status = ($status >= 400 && $status <= 599) ? $status : 422;
+            return response()->json([
+                'message' => $e->getMessage(),
+                'code' => 'EXPIRE_FAILED',
+                'errors' => [],
+            ], $status);
         }
     }
 }

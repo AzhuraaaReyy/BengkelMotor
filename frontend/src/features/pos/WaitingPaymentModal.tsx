@@ -18,6 +18,7 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
   const [status, setStatus] = useState(sale.status);
 
   useEffect(() => {
+    if (!sale.payment_expires_at) return;
     const expires = new Date(sale.payment_expires_at).getTime();
     const tick = () => {
       const remaining = Math.max(0, Math.floor((expires - Date.now()) / 1000));
@@ -51,7 +52,7 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const progress = timeLeft / (15 * 60);
+  const progress = timeLeft / (10 * 60);
   const isAmber = timeLeft <= 180;
 
   const copyVa = () => {
@@ -109,20 +110,11 @@ export function WaitingPaymentModal({ sale, onPaid, onExpired, onClose }: Props)
           </div>
         )}
 
-        {sale.payment_method === "GOPAY" && (
-          <div className="flex flex-col items-center gap-2">
-            {sale.gateway_deeplink && (
-              <a href={sale.gateway_deeplink} target="_blank" rel="noopener noreferrer" className="text-primary underline">Buka GoPay</a>
-            )}
-            <p className="text-sm text-gray-500">Bayar lewat GoPay</p>
-          </div>
-        )}
-
         {status === "EXPIRED" && (
           <div className="text-center space-y-2">
             <XCircle className="mx-auto h-12 w-12 text-gray-400" />
             <p className="font-medium">Pembayaran Kedaluwarsa</p>
-            <p className="text-sm text-gray-500">Waktu pembayaran (15 menit) habis. Stok sudah dikembalikan otomatis.</p>
+            <p className="text-sm text-gray-500">Waktu pembayaran (10 menit) habis. Stok sudah dikembalikan otomatis.</p>
           </div>
         )}
 

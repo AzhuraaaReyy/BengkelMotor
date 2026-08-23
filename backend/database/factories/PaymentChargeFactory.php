@@ -18,7 +18,7 @@ class PaymentChargeFactory extends Factory
             'amount' => 100000,
             'status' => PaymentCharge::STATUS_PENDING,
             'gateway_transaction_id' => 'TX-' . fake()->unique()->numerify('######'),
-            'expires_at' => now()->addMinutes(15),
+            'expires_at' => now()->addMinutes(10),
         ];
     }
 
