@@ -3,7 +3,7 @@
 export type Role = "ADMIN" | "CASHIER";
 export type SaleStatus = "DRAFT" | "PENDING" | "PAID" | "EXPIRED" | "VOID";
 export type ServiceOrderStatus = "OPEN" | "IN_PROGRESS" | "DONE" | "CANCELLED";
-export type PaymentMethod = "CASH" | "QRIS" | "VA" | "GOPAY";
+export type PaymentMethod = "CASH" | "QRIS" | "VA";
 export type StockMovementType =
   | "OPENING"
   | "PURCHASE"

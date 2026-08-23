@@ -20,8 +20,6 @@ import {
 } from "@/components/shared/icons";
 import { ROLE_LABEL } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
-import { useLowStock } from "@/lib/useLowStock";
-import { StockAlertBanner } from "@/components/stock/StockAlertBanner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface NavItem {
@@ -79,7 +77,6 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const lowStock = useLowStock();
 
   const pageMeta = PAGE_META.find(
     (m) => location.pathname === m.path || location.pathname.startsWith(`${m.path}/`),
@@ -248,11 +245,6 @@ export function AppShell() {
         </header>
 
         <main className="flex-1 p-4 md:p-6">
-          <StockAlertBanner
-            items={lowStock.items}
-            counts={lowStock.counts}
-            loading={lowStock.loading}
-          />
           <Outlet />
         </main>
       </div>
