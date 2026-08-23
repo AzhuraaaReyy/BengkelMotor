@@ -43,8 +43,7 @@ export function PosPage() {
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -52,8 +51,14 @@ export function PosPage() {
     ReturnType<typeof checkoutSaleApi>
   > | null>(null);
   const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-  const serviceDataRef = useRef({ complaint: "", diagnosis_note: "", motorcycle_type: "" });
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+    null,
+  );
+  const serviceDataRef = useRef({
+    complaint: "",
+    diagnosis_note: "",
+    motorcycle_type: "",
+  });
 
   const hasServiceItems = useMemo(
     () => cart.some((l) => l.item_type === "SERVICE"),
@@ -229,8 +234,14 @@ export function PosPage() {
         discount_amount: safeDiscount,
         is_service: hasServiceItems || undefined,
         complaint: hasServiceItems ? svc.complaint : undefined,
-        diagnosis_note: hasServiceItems && svc.diagnosis_note ? svc.diagnosis_note : undefined,
-        motorcycle_type: hasServiceItems && svc.motorcycle_type ? svc.motorcycle_type : undefined,
+        diagnosis_note:
+          hasServiceItems && svc.diagnosis_note
+            ? svc.diagnosis_note
+            : undefined,
+        motorcycle_type:
+          hasServiceItems && svc.motorcycle_type
+            ? svc.motorcycle_type
+            : undefined,
       });
       if (isOnlinePayment) {
         setWaitingPaymentSale(paid);
@@ -259,7 +270,11 @@ export function PosPage() {
     setCart([]);
     setDiscount(0);
     setPaidAmount(0);
-    serviceDataRef.current = { complaint: "", diagnosis_note: "", motorcycle_type: "" };
+    serviceDataRef.current = {
+      complaint: "",
+      diagnosis_note: "",
+      motorcycle_type: "",
+    };
   };
 
   if (waitingPaymentSale) {
@@ -278,7 +293,9 @@ export function PosPage() {
         }}
         onClose={() => {
           setWaitingPaymentSale(null);
-          toast.info("Tagihan tetap berjalan. Cek di Riwayat Transaksi untuk melanjutkan.");
+          toast.info(
+            "Tagihan tetap berjalan. Cek di Riwayat Transaksi untuk melanjutkan.",
+          );
           reset();
         }}
       />
@@ -298,7 +315,6 @@ export function PosPage() {
   return (
     <div className="min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-4 p-4 pb-24 md:-m-6 md:p-6 md:pb-6">
       {/* ---------------- TOP HEADER ---------------- */}
-      
 
       {/* ---------------- MAIN CONTENT GRID ---------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
@@ -499,8 +515,6 @@ export function PosPage() {
               )}
             </div>
           )}
-
-         
         </div>
 
         {/* === KERANJANG BELANJA (KANAN) === */}
@@ -694,23 +708,46 @@ export function PosPage() {
               setSelectedCustomerId(c.id);
             }}
             isRequired={hasServiceItems}
-            onServiceDataChange={(data) => { serviceDataRef.current = data; }}
+            onServiceDataChange={(data) => {
+              serviceDataRef.current = data;
+            }}
           />
-          <PaymentMethodSelector value={paymentMethod} onChange={(m) => setPaymentMethod(m as keyof typeof PAYMENT_METHODS)} />
+          <PaymentMethodSelector
+            value={paymentMethod}
+            onChange={(m) =>
+              setPaymentMethod(m as keyof typeof PAYMENT_METHODS)
+            }
+          />
 
           {/* Detail Transaksi */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:p-4">
-            <p className="text-xs font-bold text-slate-700 mb-2">Detail Transaksi</p>
+            <p className="text-xs font-bold text-slate-700 mb-2">
+              Detail Transaksi
+            </p>
             <div className="space-y-2">
               {cart.map((item, index) => {
-                const name = item.item_type === "PRODUCT" ? item.product?.name : item.service?.name;
-                const price = item.item_type === "PRODUCT" ? (item.product?.sale_price ?? 0) : (item.service?.sale_price ?? 0);
+                const name =
+                  item.item_type === "PRODUCT"
+                    ? item.product?.name
+                    : item.service?.name;
+                const price =
+                  item.item_type === "PRODUCT"
+                    ? (item.product?.sale_price ?? 0)
+                    : (item.service?.sale_price ?? 0);
                 return (
-                  <div key={index} className="flex items-center justify-between text-xs">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-xs"
+                  >
                     <span className="text-slate-600 truncate flex-1 mr-2">
-                      {name} <span className="text-slate-400">&times; {item.quantity}</span>
+                      {name}{" "}
+                      <span className="text-slate-400">
+                        &times; {item.quantity}
+                      </span>
                     </span>
-                    <span className="font-bold text-slate-800 tabular-nums">{formatRupiah(price * item.quantity)}</span>
+                    <span className="font-bold text-slate-800 tabular-nums">
+                      {formatRupiah(price * item.quantity)}
+                    </span>
                   </div>
                 );
               })}
@@ -718,17 +755,23 @@ export function PosPage() {
             <div className="mt-3 pt-2 border-t border-slate-200 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500">Subtotal</span>
-                <span className="font-bold text-slate-800 tabular-nums">{formatRupiah(subtotal)}</span>
+                <span className="font-bold text-slate-800 tabular-nums">
+                  {formatRupiah(subtotal)}
+                </span>
               </div>
               {safeDiscount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-slate-500">Diskon</span>
-                  <span className="font-bold text-red-500 tabular-nums">-{formatRupiah(safeDiscount)}</span>
+                  <span className="font-bold text-red-500 tabular-nums">
+                    -{formatRupiah(safeDiscount)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between pt-1 border-t border-slate-200">
                 <span className="font-bold text-slate-800">Total</span>
-                <span className="font-bold text-blue-600 tabular-nums">{formatRupiah(grandTotal)}</span>
+                <span className="font-bold text-blue-600 tabular-nums">
+                  {formatRupiah(grandTotal)}
+                </span>
               </div>
             </div>
           </div>
@@ -755,7 +798,8 @@ export function PosPage() {
           )}
           {isOnlinePayment && (
             <p className="text-xs text-center text-gray-500">
-              Tagihan akan dibuat dengan status Menunggu Bayar. Stok di-reserve otomatis.
+              Tagihan akan dibuat dengan status Menunggu Bayar. Stok di-reserve
+              otomatis.
             </p>
           )}
         </div>
@@ -773,9 +817,7 @@ export function PosPage() {
             }
             className="flex w-full items-center justify-between rounded-2xl bg-blue-600 px-4 py-3 text-white shadow-lg shadow-blue-500/20"
           >
-            <span className="text-xs font-bold">
-              Keranjang ({cart.length})
-            </span>
+            <span className="text-xs font-bold">Keranjang ({cart.length})</span>
             <span className="flex items-center gap-1.5 text-xs font-bold">
               <span>{formatRupiah(grandTotal)}</span>
               <ArrowRight className="h-3.5 w-3.5" />

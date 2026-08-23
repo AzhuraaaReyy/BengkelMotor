@@ -164,18 +164,19 @@
 }
 .thermal-scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
-/* Print: thermal 80mm, no margins, no buttons, hide everything except receipt */
+/* Print: thermal 80mm, no margins, no buttons */
 @media print {
-  /* Hide everything by default */
-  body > * {
+  /* Hide UI elements that shouldn't print */
+  header,
+  aside,
+  .no-print,
+  main > div:not(.thermal-scroll) {
     display: none !important;
   }
   
-  /* Show only the receipt container and its content */
-  .thermal-scroll,
-  .thermal-receipt {
+  /* Ensure receipt container fills page for print */
+  .thermal-scroll {
     display: block !important;
-    visibility: visible !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -185,20 +186,18 @@
     overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
+    z-index: 9999 !important;
+    background: #fff !important;
   }
   
   /* Receipt styling for print */
   .thermal-receipt {
     max-width: none !important;
     width: 80mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin: 0 auto !important;
+    padding: 8px !important;
     font-size: 10px !important;
-  }
-  
-  .thermal-scroll {
-    max-height: none !important;
-    overflow: visible !important;
+    background: #fff !important;
   }
   
   .no-print { display: none !important; }
