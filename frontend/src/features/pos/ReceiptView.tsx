@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { PrinterIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
@@ -14,33 +14,16 @@ export function ReceiptView({
   onClose: () => void;
   customerName?: string;
 }) {
-  const isPrintingRef = useRef(false);
-  const printDialogOpenRef = useRef(false);
-
-  useEffect(() => {
-    const handleBeforePrint = () => {
-      printDialogOpenRef.current = true;
-    };
-    const handleAfterPrint = () => {
-      printDialogOpenRef.current = false;
-    };
-    window.addEventListener("beforeprint", handleBeforePrint);
-    window.addEventListener("afterprint", handleAfterPrint);
-    return () => {
-      window.removeEventListener("beforeprint", handleBeforePrint);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, []);
+  const lastPrintTimeRef = useRef<number>(0);
 
   const handlePrint = () => {
-    // Prevent duplicate prints: check both ref flag and print dialog state
-    if (isPrintingRef.current || printDialogOpenRef.current) return;
-    isPrintingRef.current = true;
+    const now = Date.now();
+    // Prevent duplicate prints using timestamp-based cooldown (3 seconds)
+    if (Date.now() - lastPrintTimeRef.current < 3000) {
+      return;
+    }
+    lastPrintTimeRef.current = now;
     window.print();
-    // Fallback reset after 2 seconds in case afterprint doesn't fire
-    setTimeout(() => {
-      isPrintingRef.current = false;
-    }, 2000);
   };
 
   const renderPaymentDetail = () => {
