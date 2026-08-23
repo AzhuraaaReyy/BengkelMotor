@@ -38,6 +38,8 @@ interface FormState {
   sale_price: string;
   min_stock: string;
   is_active: boolean;
+  image: File | null;
+  imagePreview: string | null;
 }
 
 const emptyForm: FormState = {
@@ -50,6 +52,8 @@ const emptyForm: FormState = {
   sale_price: "0",
   min_stock: "0",
   is_active: true,
+  image: null,
+  imagePreview: null,
 };
 
 export function ProductsPage() {
@@ -124,6 +128,8 @@ export function ProductsPage() {
       sale_price: String(p.sale_price),
       min_stock: String(p.min_stock),
       is_active: p.is_active,
+      image: null,
+      imagePreview: p.image || null,
     });
     setFormOpen(true);
   };
@@ -146,6 +152,7 @@ export function ProductsPage() {
           sale_price: Number(form.sale_price),
           min_stock: Number(form.min_stock),
           is_active: form.is_active,
+          image: form.image,
         });
         toast.success("Produk diperbarui.");
       } else {
@@ -159,6 +166,7 @@ export function ProductsPage() {
           sale_price: Number(form.sale_price),
           min_stock: Number(form.min_stock),
           is_active: form.is_active,
+          image: form.image,
         });
         toast.success("Produk dibuat.");
       }
@@ -425,7 +433,11 @@ export function ProductsPage() {
       {/* Product form modal */}
       <Modal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
+        onClose={() => {
+          if (form.imagePreview) URL.revokeObjectURL(form.imagePreview);
+          setForm(emptyForm);
+          setFormOpen(false);
+        }}
         title={form.id ? "Edit Produk" : "Produk Baru"}
         size="lg"
         footer={
@@ -516,6 +528,29 @@ export function ProductsPage() {
               { value: "false", label: "Nonaktif" },
             ]}
           />
+          <Input
+            label="Foto Produk"
+            name="image"
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              const preview = file ? URL.createObjectURL(file) : null;
+              setForm({ ...form, image: file, imagePreview: preview });
+            }}
+          />
+          {form.imagePreview && (
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Preview
+              </label>
+              <img
+                src={form.imagePreview}
+                alt="Preview"
+                className="w-32 h-32 object-cover rounded-lg border border-border"
+              />
+            </div>
+          )}
         </div>
       </Modal>
 

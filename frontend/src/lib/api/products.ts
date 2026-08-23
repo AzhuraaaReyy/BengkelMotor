@@ -18,6 +18,27 @@ export interface ProductPayload {
   sale_price: number;
   min_stock: number;
   is_active: boolean;
+  image?: File | null;
+}
+
+export interface StockAdjustPayload {
+  type: "PURCHASE" | "ADJUSTMENT";
+  quantity: number;
+  note: string;
+}
+
+function toFormData(payload: ProductPayload): FormData {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      if (value instanceof File) {
+        formData.append(key, value);
+      } else {
+        formData.append(key, String(value));
+      }
+    }
+  });
+  return formData;
 }
 
 export interface StockAdjustPayload {
@@ -37,9 +58,13 @@ export async function getProductsApi(params?: Record<string, unknown>) {
 export async function createProductApi(
   payload: ProductPayload,
 ): Promise<Product> {
+  const formData = toFormData(payload);
   const { data } = await client.post<ApiResponse<Product>>(
     "/products",
-    payload,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
   );
   return data.data;
 }
@@ -48,9 +73,13 @@ export async function updateProductApi(
   id: number,
   payload: Partial<ProductPayload>,
 ): Promise<Product> {
-  const { data } = await client.put<ApiResponse<Product>>(
+  const formData = toFormData(payload as ProductPayload);
+  const { data } = await client.post<ApiResponse<Product>>(
     `/products/${id}`,
-    payload,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    },
   );
   return data.data;
 }

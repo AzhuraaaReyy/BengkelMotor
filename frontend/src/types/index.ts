@@ -56,6 +56,7 @@ export interface Product {
   current_stock: number;
   min_stock: number;
   is_active: boolean;
+  image?: string | null;
   created_at?: string;
   updated_at?: string;
 }

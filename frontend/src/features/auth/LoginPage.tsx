@@ -4,6 +4,7 @@ import { useAuth } from "@/app/auth/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { WrenchIcon } from "@/components/shared/icons";
+import bgmotor from "../../app/assets/backgroundmotor.png";
 import {
   Mail,
   Lock,
@@ -14,7 +15,6 @@ import {
   Package,
   ShieldCheck,
   Headphones,
-  Shield,
 } from "lucide-react";
 
 export function LoginPage() {
@@ -71,28 +71,29 @@ export function LoginPage() {
   };
 
   return (
-    // DIHAPUS: min-h-[700px]
-    // DITAMBAHKAN: overflow-hidden untuk mencegah scroll keseluruhan
     <div className="flex h-screen w-full bg-[#f8fafc] font-sans overflow-hidden">
       {/* --- KOLOM KIRI --- */}
       <div
         className="relative hidden h-full w-[55%] flex-col bg-[#0b2447] text-white md:flex z-10 shadow-2xl"
         style={{ clipPath: "polygon(0 0, 100% 0, 85% 100%, 0 100%)" }}
       >
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
+        {/* Background Image - Diubah agar fokus gambar bergeser ke sebelah kanan */}
+        <div className="absolute inset-0 z-0 flex">
+          {/* Gambar Foto (Tampil utuh di latar belakang) */}
           <img
-            src="../../app/assets/backgroundmotor.png"
+            src={bgmotor}
             alt="Bengkel Background"
-            className="h-full w-full object-cover opacity-[0.15]"
+            className="absolute inset-0 h-full w-full object-cover object-right opacity-60"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1a4f9c]/80 to-[#0b2447]/90"></div>
+
+          {/* Gradasi Biru Khusus di Sebelah Kiri (Transparan ke Kanan) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0b2447] via-[#0b2447]/80 to-transparent w-[75%] z-10"></div>
+
+          {/* Gradasi Tipis Keseluruhan untuk menyatukan warna */}
+          <div className="absolute inset-0 bg-[#0b2447]/30 z-20"></div>
         </div>
 
-        {/* 
-          Konten Teks Kiri
-          Padding atas-bawah (py) dikurangi menjadi py-8 lg:py-10 agar tidak menabrak batas layar
-        */}
+        {/* Konten Teks Kiri */}
         <div className="relative z-10 flex h-full flex-col justify-between pl-8 pr-20 py-8 lg:pl-12 lg:pr-28 lg:py-10">
           <div>
             {/* Header / Logo */}
@@ -103,12 +104,12 @@ export function LoginPage() {
               <div className="leading-tight">
                 <p className="text-base font-bold">Bengkel</p>
                 <p className="text-[10px] font-medium text-blue-200">
-                  POS & Monitoring
+                  Putra Motor
                 </p>
               </div>
             </div>
 
-            {/* Headline Teks - Teks diperkecil dan margin atas (mt) dikurangi */}
+            {/* Headline Teks */}
             <div className="mt-8 lg:mt-10">
               <h1 className="text-2xl font-bold leading-tight xl:text-[28px] lg:leading-snug">
                 Kelola transaksi bengkel <br /> lebih mudah & efisien
@@ -119,7 +120,7 @@ export function LoginPage() {
               </p>
             </div>
 
-            {/* List Fitur - Gap dan margin diperkecil */}
+            {/* List Fitur */}
             <div className="mt-6 flex flex-col gap-4 xl:gap-5 xl:mt-8">
               <div className="flex items-start gap-3.5">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#1a4f9c] shadow-md">
@@ -182,7 +183,6 @@ export function LoginPage() {
       </div>
 
       {/* --- KOLOM KANAN (FORM LOGIN) --- */}
-      {/* Menggunakan overflow-hidden untuk menjamin tidak ada scroll internal */}
       <div className="relative flex h-full flex-1 flex-col items-center justify-center p-4 lg:p-6 overflow-hidden">
         {/* Dekorasi Pola Titik */}
         <div
@@ -194,7 +194,6 @@ export function LoginPage() {
           }}
         ></div>
 
-        {/* Max-width form sedikit diperkecil dan padding dikurangi agar fit */}
         <div className="z-10 w-full max-w-[380px] xl:max-w-[400px]">
           {/* Header Form */}
           <div className="mb-6 flex flex-col items-center text-center">
@@ -202,7 +201,7 @@ export function LoginPage() {
               <WrenchIcon className="h-6 w-6" />
             </div>
             <h2 className="mt-4 text-[22px] font-bold text-gray-900">
-              Bengkel POS & Monitoring
+              Bengkel Putra Motor
             </h2>
             <p className="mt-1.5 text-[13px] text-gray-500">
               Masuk untuk melanjutkan ke sistem
@@ -211,7 +210,6 @@ export function LoginPage() {
 
           {/* Kotak Form */}
           <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100/80">
-            {/* space-y-4 agar form lebih merapat */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Input Email */}
               <div className="space-y-1.5">
@@ -223,7 +221,6 @@ export function LoginPage() {
                   <input
                     type="email"
                     required
-                    // py-2 (diperkecil dari py-2.5) untuk menghemat tinggi form
                     className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-4 text-[13px] text-gray-900 transition-colors focus:border-[#2563eb] focus:outline-none focus:ring-1 focus:ring-[#2563eb] bg-gray-50/50"
                     placeholder="Masukkan email Anda"
                     value={email}
@@ -296,38 +293,8 @@ export function LoginPage() {
                 {!loading && <ArrowRight className="h-4 w-4" />}
                 Masuk
               </Button>
-
-              {/* Divider */}
-              <div className="relative flex items-center py-1">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink-0 px-3 text-[10px] text-gray-400">
-                  atau masuk dengan
-                </span>
-                <div className="flex-grow border-t border-gray-200"></div>
-              </div>
-
-              {/* Tombol Login Sebagai Kasir */}
-              <button
-                type="button"
-                className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <Shield className="h-4 w-4 text-gray-500" />
-                Login sebagai Kasir
-              </button>
             </form>
           </div>
-
-          {/* Footer Text */}
-          <p className="mt-6 text-center text-[12px] text-gray-500">
-            Belum punya akun?{" "}
-            <a
-              href="#"
-              className="font-semibold text-[#2563eb] hover:underline"
-            >
-              Hubungi administrator
-            </a>{" "}
-            sistem.
-          </p>
         </div>
       </div>
     </div>

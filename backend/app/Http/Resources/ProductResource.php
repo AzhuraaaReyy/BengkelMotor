@@ -20,6 +20,7 @@ class ProductResource extends JsonResource
             'min_stock' => $this->min_stock,
             'is_active' => $this->is_active,
             'is_low_stock' => $this->isLowStock(),
+            'image' => $this->image,
             // purchase_price only exposed to Admin.
             'purchase_price' => $this->when($this->purchasePriceVisible(), $this->purchase_price),
         ];

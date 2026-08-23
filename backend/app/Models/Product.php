@@ -20,6 +20,7 @@ class Product extends Model
         'current_stock',
         'min_stock',
         'is_active',
+        'image',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class Product extends Model
             'current_stock' => 'integer',
             'min_stock' => 'integer',
             'is_active' => 'boolean',
+            'image' => 'string',
         ];
     }
 

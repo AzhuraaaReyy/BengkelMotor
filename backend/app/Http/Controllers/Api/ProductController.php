@@ -10,6 +10,7 @@ use App\Services\Audit\AuditService;
 use App\Services\Inventory\AdjustStockService;
 use App\Support\CodeGenerator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use RuntimeException;
 
@@ -155,7 +156,13 @@ class ProductController extends Controller
             // Stock is whole numbers only (Fase 3).
             'current_stock' => ['nullable', 'integer', 'min:0'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
+            'image' => ['nullable', 'file', 'image', 'max:2048', 'dimensions:max_width=1024,max_height=1024'],
         ]);
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('products', 'public');
+        }
 
         $product = Product::create([
             'sku' => CodeGenerator::sku($validated['name']),
@@ -168,6 +175,7 @@ class ProductController extends Controller
             'current_stock' => $validated['current_stock'] ?? 0,
             'min_stock' => $validated['min_stock'] ?? 0,
             'is_active' => true,
+            'image' => $imagePath,
         ]);
 
         // Record opening stock movement if initial stock > 0.
@@ -207,10 +215,20 @@ class ProductController extends Controller
             // Stock is whole numbers only (Fase 3).
             'min_stock' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
+            'image' => ['nullable', 'file', 'image', 'max:2048', 'dimensions:max_width=1024,max_height=1024'],
         ]);
 
         // current_stock cannot be changed via master update (must use adjustment endpoint).
-        $before = $product->only(['name', 'sale_price', 'purchase_price', 'min_stock', 'is_active']);
+        $before = $product->only(['name', 'sale_price', 'purchase_price', 'min_stock', 'is_active', 'image']);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image) {
+                \Storage::disk('public')->delete($product->image);
+            }
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
 
         $product->update($validated);
 
