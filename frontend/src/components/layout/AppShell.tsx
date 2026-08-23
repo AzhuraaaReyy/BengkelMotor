@@ -22,7 +22,7 @@ import { ROLE_LABEL } from "@/lib/constants";
 import { Button } from "@/components/ui/Button";
 import { useLowStock } from "@/lib/useLowStock";
 import { StockAlertBanner } from "@/components/stock/StockAlertBanner";
-import { StockNotificationBell } from "@/components/stock/StockNotificationBell";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface NavItem {
   to: string;
@@ -220,7 +220,7 @@ export function AppShell() {
               </p>
             )}
           </div>
-          <StockNotificationBell items={lowStock.items} counts={lowStock.counts} />
+          <NotificationBell />
         </header>
 
         {/* Mobile topbar */}
@@ -243,7 +243,7 @@ export function AppShell() {
             )}
           </div>
           <div className="shrink-0">
-            <StockNotificationBell items={lowStock.items} counts={lowStock.counts} />
+            <NotificationBell />
           </div>
         </header>
 
