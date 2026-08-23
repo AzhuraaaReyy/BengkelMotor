@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('message');
             $table->json('data')->nullable();
             $table->timestamp('read_at')->nullable();
-            $table->timestamp('created_at');
+            $table->timestamps();
 
             $table->index(['user_id', 'type']);
             $table->index(['user_id', 'read_at']);
