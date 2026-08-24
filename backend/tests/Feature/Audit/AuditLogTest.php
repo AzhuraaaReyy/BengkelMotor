@@ -62,4 +62,29 @@ class AuditLogTest extends TestCase
         $payload = json_encode([$log->before_data, $log->after_data]);
         $this->assertStringNotContainsString('rahasia123', $payload);
     }
+
+    public function test_index_paginates_ten_per_page_by_default_and_honors_per_page(): void
+    {
+        $admin = $this->admin();
+
+        // 12 entri audit: satu aksi produk per baris.
+        for ($i = 0; $i < 12; $i++) {
+            $product = \App\Models\Product::factory()->create(['current_stock' => 5]);
+            $this->actingAs($admin)->postJson("/api/v1/products/{$product->id}/adjust-stock", [
+                'quantity' => 1,
+                'type' => 'ADJUSTMENT',
+                'note' => "Sweep {$i}",
+            ])->assertStatus(200);
+        }
+
+        $default = $this->actingAs($admin)->getJson('/api/v1/audit-logs');
+        $default->assertStatus(200);
+        $this->assertCount(10, $default->json('data.data'));
+        $this->assertSame(2, $default->json('data.last_page'));
+
+        $custom = $this->actingAs($admin)->getJson('/api/v1/audit-logs?per_page=5');
+        $custom->assertStatus(200);
+        $this->assertCount(5, $custom->json('data.data'));
+        $this->assertSame(5, $custom->json('data.per_page'));
+    }
 }
