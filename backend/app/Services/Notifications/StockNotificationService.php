@@ -20,6 +20,8 @@ class StockNotificationService
         }
 
         if ($currentStock >= self::STOCK_THRESHOLD) {
+            // Stok sudah aman → bersihkan notifikasi stok lama produk ini.
+            $this->notification->deleteStockForProduct($product->id);
             return;
         }
 

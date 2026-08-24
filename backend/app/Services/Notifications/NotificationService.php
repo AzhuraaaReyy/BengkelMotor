@@ -75,6 +75,13 @@ class NotificationService
             ->delete();
     }
 
+    public function deleteStockForProduct(int $productId): int
+    {
+        return Notification::where('type', 'STOCK')
+            ->whereRaw("CAST(data->>'$.product_id' AS UNSIGNED) = ?", [$productId])
+            ->delete();
+    }
+
     public function cleanup(int $days = 30): int
     {
         return Notification::where('created_at', '<', now()->subDays($days))->delete();
