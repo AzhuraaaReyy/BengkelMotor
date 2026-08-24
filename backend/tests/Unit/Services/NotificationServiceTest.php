@@ -35,6 +35,24 @@ class NotificationServiceTest extends TestCase
         $this->assertDatabaseHas('notifications', ['title' => 'S1']);
     }
 
+    public function test_get_for_user_hides_legacy_read_transactions(): void
+    {
+        // Residu legacy: baris TRANSAKSI berstatus read dari sebelum
+        // delete-on-read diberlakukan tidak boleh tampil lagi di daftar.
+        $user = $this->cashier();
+        $svc = app(NotificationService::class);
+        $legacy = $svc->create($user, 'TRANSACTION', 'Legacy', 'm');
+        $svc->create($user, 'TRANSACTION', 'Baru', 'm');
+        $svc->create($user, 'STOCK', 'S1', 'm');
+        $legacy->forceFill(['read_at' => now()])->save();
+
+        $titles = $svc->getForUser($user)->pluck('title');
+
+        $this->assertNotContains('Legacy', $titles);
+        $this->assertContains('Baru', $titles);
+        $this->assertContains('S1', $titles);
+    }
+
     public function test_cleanup_purges_old_transaction_and_system_but_keeps_stock(): void
     {
         $user = $this->cashier();

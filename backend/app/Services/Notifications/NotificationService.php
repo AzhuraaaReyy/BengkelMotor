@@ -93,6 +93,13 @@ class NotificationService
 
     private function baseQuery(User $user): \Illuminate\Database\Eloquent\Builder
     {
-        return Notification::where('user_id', $user->id)->orderByDesc('created_at');
+        return Notification::where('user_id', $user->id)
+            // TRANSAKSI yang berstatus read seharusnya sudah terhapus
+            // (delete-on-read); sembunyikan residu legacy agar tidak
+            // pernah muncul lagi di daftar.
+            ->where(function ($q) {
+                $q->whereNull('read_at')->orWhere('type', '!=', 'TRANSACTION');
+            })
+            ->orderByDesc('created_at');
     }
 }
