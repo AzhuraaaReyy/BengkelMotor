@@ -34,4 +34,21 @@ class NotificationServiceTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['title' => 'T1']);
         $this->assertDatabaseHas('notifications', ['title' => 'S1']);
     }
+
+    public function test_cleanup_purges_old_transaction_and_system_but_keeps_stock(): void
+    {
+        $user = $this->cashier();
+        $svc = app(NotificationService::class);
+        $svc->create($user, 'TRANSACTION', 'Lama T', 'x');
+        $svc->create($user, 'SYSTEM', 'Lama S', 'x');
+        $svc->create($user, 'STOCK', 'Stok habis', 'x');
+        \App\Models\Notification::query()->update(['created_at' => now()->subDays(31)]);
+
+        $deleted = $svc->cleanup(30);
+
+        $this->assertSame(2, $deleted);
+        $this->assertDatabaseMissing('notifications', ['title' => 'Lama T']);
+        $this->assertDatabaseMissing('notifications', ['title' => 'Lama S']);
+        $this->assertDatabaseHas('notifications', ['title' => 'Stok habis']);
+    }
 }

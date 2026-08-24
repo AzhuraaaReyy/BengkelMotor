@@ -84,7 +84,11 @@ class NotificationService
 
     public function cleanup(int $days = 30): int
     {
-        return Notification::where('created_at', '<', now()->subDays($days))->delete();
+        // Retensi 30 hari untuk TRANSACTION dan SYSTEM; STOK dikelola
+        // oleh resolusi stok (StockNotificationService), bukan usia.
+        return Notification::whereIn('type', ['TRANSACTION', 'SYSTEM'])
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
     }
 
     private function baseQuery(User $user): \Illuminate\Database\Eloquent\Builder
