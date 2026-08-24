@@ -15,11 +15,13 @@ class ExpenseController extends Controller
 
     public function index(Request $request)
     {
+        $perPage = min(max($request->integer('per_page', 10), 1), 500);
+
         $expenses = Expense::with('createdBy:id,name')
             ->when($request->category, fn($q, $c) => $q->where('category', $c))
             ->when($request->from && $request->to, fn($q) => $q->whereBetween(DB::raw('DATE(expense_date)'), [$request->from, $request->to]))
             ->orderByDesc('expense_date')
-            ->paginate(15);
+            ->paginate($perPage);
 
         $total = Expense::query()
             ->when($request->from && $request->to, fn($q) => $q->whereBetween(DB::raw('DATE(expense_date)'), [$request->from, $request->to]))

@@ -89,4 +89,20 @@ class ExpenseTest extends TestCase
         $this->assertEquals(12345, (float) $response->json('meta.total_amount'));
         $this->assertNotEmpty($response->json('data.data'));
     }
+
+    public function test_index_paginates_ten_per_page_by_default_and_honors_per_page(): void
+    {
+        $admin = $this->admin();
+        Expense::factory()->count(12)->create(['created_by' => $admin->id]);
+
+        $default = $this->actingAs($admin)->getJson('/api/v1/expenses');
+        $default->assertStatus(200);
+        $this->assertCount(10, $default->json('data.data'));
+        $this->assertSame(2, $default->json('data.last_page'));
+
+        $custom = $this->actingAs($admin)->getJson('/api/v1/expenses?per_page=5');
+        $custom->assertStatus(200);
+        $this->assertCount(5, $custom->json('data.data'));
+        $this->assertSame(5, $custom->json('data.per_page'));
+    }
 }
