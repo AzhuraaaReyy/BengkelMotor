@@ -38,30 +38,31 @@ export function useNotifications() {
   const markAsRead = useCallback(async (id: number) => {
     try {
       await markAsReadApi(id);
+      const target = notifications.find((n) => n.id === id);
+      const isStock = target?.type === "STOCK";
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+        isStock
+          ? prev.map((n) =>
+              n.id === id ? { ...n, read_at: new Date().toISOString() } : n
+            )
+          : prev.filter((n) => n.id !== id)
       );
       setUnreadCounts((prev) => ({
         ...prev,
+        transaction: isStock ? prev.transaction : Math.max(0, prev.transaction - 1),
         total: Math.max(0, prev.total - 1),
       }));
     } catch {
       // Best-effort
     }
-  }, []);
+  }, [notifications]);
 
   const markAllAsRead = useCallback(async () => {
     try {
       await markAllAsReadApi();
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.type !== "STOCK" && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n
-        )
-      );
+      setNotifications((prev) => prev.filter((n) => n.type === "STOCK"));
       setUnreadCounts((prev) => ({
-        ...prev,
+        stock: prev.stock,
         transaction: 0,
         total: prev.stock,
       }));
