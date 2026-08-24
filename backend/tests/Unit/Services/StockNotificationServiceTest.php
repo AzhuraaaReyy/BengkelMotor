@@ -64,4 +64,38 @@ class StockNotificationServiceTest extends TestCase
 
         $this->assertDatabaseCount('notifications', 1);
     }
+
+    public function test_sync_stock_command_creates_notification_for_silent_zero_stock(): void
+    {
+        // Produk yang sudah habis tanpa pernah menaikkan notifikasi
+        // (kejadian di luar jalur penjualan/Atur Stok) harus tertangkap
+        // oleh sweep rekonsiliasi.
+        \App\Models\User::factory()->cashier()->create();
+        Product::factory()->create(['current_stock' => 0, 'name' => 'Silent Habis']);
+
+        $this->artisan('notifications:sync-stock')->assertSuccessful();
+
+        $this->assertDatabaseHas('notifications', [
+            'type' => 'STOCK',
+            'title' => 'Stok Habis!',
+        ]);
+    }
+
+    public function test_sync_stock_command_replaces_stale_snapshot_and_clears_safe_products(): void
+    {
+        \App\Models\User::factory()->cashier()->create();
+        $stale = Product::factory()->create(['current_stock' => 0, 'name' => 'Stale']);
+        $safe = Product::factory()->create(['current_stock' => 9, 'name' => 'Sudah Aman']);
+        app(\App\Services\Notifications\StockNotificationService::class)->check($stale, 3); // snapshot usang "menipis 3"
+
+        $this->artisan('notifications:sync-stock')->assertSuccessful();
+
+        $n = \App\Models\Notification::where('type', 'STOCK')->get();
+        $this->assertSame(1, $n->count());
+        $this->assertSame('Stok Habis!', $n[0]->title);
+        $this->assertSame($stale->id, (int) $n[0]->data['product_id']);
+        $this->assertDatabaseMissing('notifications', ['product_id' => null]);
+        // Produk aman tidak meninggalkan notifikasi stok apa pun.
+        $this->assertTrue($n->every(fn ($row) => (int) $row->data['product_id'] === $stale->id));
+    }
 }

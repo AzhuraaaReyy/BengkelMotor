@@ -10,3 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('expire:pending-sales')->everyMinute();
 Schedule::command('notifications:cleanup')->daily();
+// Sweep konvergen: produk yang sudah rendah/habus di luar jalur
+// penjualan/Atur Stok tetap mendapat notifikasi tanpa menunggu
+// perubahan stok berikutnya.
+Schedule::command('notifications:sync-stock')->hourly();
