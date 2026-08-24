@@ -20,7 +20,7 @@ export function AuditPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getAuditLogsApi({ page, per_page: 20 });
+      const res = await getAuditLogsApi({ page, per_page: 10 });
       setData(res.data);
       setLastPage(res.last_page);
       setTotal(res.total);
