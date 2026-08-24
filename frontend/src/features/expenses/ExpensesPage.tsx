@@ -57,7 +57,7 @@ export function ExpensesPage() {
         from,
         to,
         page,
-        per_page: 15,
+        per_page: 10,
       });
       setData(res.data);
       setLastPage(res.last_page);

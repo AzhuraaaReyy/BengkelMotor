@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable, type Column } from "@/components/ui/DataTable";
+import { Pagination } from "@/components/ui/Pagination";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
@@ -31,6 +32,33 @@ function startOfMonth(): string {
 }
 
 type AnyRow = Record<string, any>;
+
+const REPORT_PAGE_SIZE = 10;
+
+// Tabel laporan memakai paginasi sisi-klien (10 baris/halaman): payload
+// laporan tetap utuh untuk ekspor, hanya tampilan yang dipotong.
+function PagedTable<T>({ columns, data, keyExtractor }: {
+  columns: Column<T>[];
+  data: T[];
+  keyExtractor: (r: T) => string | number;
+}) {
+  const [page, setPage] = useState(1);
+  const lastPage = Math.max(1, Math.ceil(data.length / REPORT_PAGE_SIZE));
+  const safePage = Math.min(page, lastPage);
+  const rows = data.slice((safePage - 1) * REPORT_PAGE_SIZE, safePage * REPORT_PAGE_SIZE);
+
+  return (
+    <div>
+      <DataTable columns={columns} data={rows} keyExtractor={keyExtractor} />
+      <Pagination
+        currentPage={safePage}
+        lastPage={lastPage}
+        total={data.length}
+        onPageChange={setPage}
+      />
+    </div>
+  );
+}
 
 // Backend response shapes (App\Services\Reports\ReportQueryService):
 // sales:    { summary: {transactions,revenue,discount,product_sales,service_sales,voided}, payment_methods: [{method,count,total}], transactions: [...] }
@@ -227,7 +255,7 @@ function SalesReportView({ data }: { data: AnyRow | null }) {
             Belum ada transaksi pada periode ini.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "sale_code",
@@ -298,7 +326,7 @@ function ServicesReportView({ data }: { data: AnyRow | null }) {
             Belum ada data.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "service_name",
@@ -331,7 +359,7 @@ function ServicesReportView({ data }: { data: AnyRow | null }) {
             Belum ada order servis pada periode ini.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "order_code",
@@ -390,7 +418,7 @@ function InventoryReportView({ data }: { data: AnyRow | null }) {
             Belum ada data penjualan pada periode ini.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "name",
@@ -417,7 +445,7 @@ function InventoryReportView({ data }: { data: AnyRow | null }) {
             Tidak ada produk yang berada di bawah batas minimum.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "name",
@@ -489,7 +517,7 @@ function FinanceReportView({ data }: { data: AnyRow | null }) {
             Belum ada pengeluaran tercatat pada periode ini.
           </p>
         ) : (
-          <DataTable
+          <PagedTable
             columns={[
               {
                 key: "expense_date",
