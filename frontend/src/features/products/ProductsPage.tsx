@@ -14,6 +14,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { StockBadge } from "@/components/ui/badges";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { useNotifications } from "@/lib/useNotifications";
 import { useAuth } from "@/app/auth/AuthContext";
 import {
   getProductsApi,
@@ -58,6 +59,7 @@ const emptyForm: FormState = {
 
 export function ProductsPage() {
   const toast = useToast();
+  const { refresh: refreshNotifications } = useNotifications();
   const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,9 +174,10 @@ export function ProductsPage() {
       }
       setFormOpen(false);
       load();
+      refreshNotifications();
     } catch (e) {
       const err = e as { message?: string };
-      toast.error(err.message || "Gagal menyimpan produk.");
+      setError(err.message || "Gagal menyimpan.");
     } finally {
       setSaving(false);
     }
@@ -211,13 +214,14 @@ export function ProductsPage() {
       });
       toast.success(
         adjustType === "PURCHASE"
-          ? "Stok ditambahkan dan pengeluaran tercatat."
+          ? "Stok masuk berhasil dicatat."
           : "Stok diperbarui.",
       );
       setAdjustTarget(null);
       setAdjustQuantity("");
       setAdjustNote("");
       load();
+      refreshNotifications();
     } catch (e) {
       const err = e as { message?: string };
       toast.error(err.message || "Gagal menyesuaikan stok.");
@@ -252,14 +256,6 @@ export function ProductsPage() {
     adjustTarget && Number.isFinite(adjustQty)
       ? adjustTarget.current_stock + adjustQty
       : null;
-  const purchaseTotal =
-    adjustType === "PURCHASE" &&
-    adjustTarget &&
-    Number.isFinite(adjustQty) &&
-    adjustQty > 0
-      ? adjustQty * adjustTarget.purchase_price
-      : null;
-
   const columns: Column<Product>[] = [
     {
       key: "sku",
@@ -334,14 +330,12 @@ export function ProductsPage() {
   return (
     <div>
       <PageHeader
-        actions={
-          isAdmin && (
-            <Button onClick={openCreate}>
-              <PlusIcon className="h-4 w-4" />
-              Produk Baru
-            </Button>
-          )
-        }
+        actions={isAdmin ? (
+          <Button onClick={openCreate}>
+            <PlusIcon className="h-4 w-4" />
+            Produk Baru
+          </Button>
+        ) : undefined}
       />
 
       <Card className="mb-4">
@@ -606,23 +600,17 @@ export function ProductsPage() {
                 value={adjustQuantity}
                 onChange={(e) => setAdjustQuantity(e.target.value)}
               />
-              {purchaseTotal !== null && (
+              {previewAfter !== null && (
                 <div className="rounded-control border border-border bg-surface-2 px-4 py-3 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-text-secondary">Stok akhir</span>
                     <span className="font-bold text-text-primary">
-                      {formatQuantity(previewAfter ?? 0)} {adjustTarget?.unit}
+                      {formatQuantity(previewAfter)} {adjustTarget?.unit}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-text-secondary">
-                      Total pengeluaran ({formatQuantity(adjustQty)} ×{" "}
-                      {formatRupiah(adjustTarget?.purchase_price ?? 0)})
-                    </span>
-                    <span className="font-bold text-danger">
-                      {formatRupiah(purchaseTotal)}
-                    </span>
-                  </div>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Stok masuk tidak membuat pengeluaran otomatis.
+                  </p>
                 </div>
               )}
             </>
