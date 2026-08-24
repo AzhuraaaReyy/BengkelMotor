@@ -58,6 +58,12 @@ class NotificationService
 
     public function markAsRead(Notification $notification): void
     {
+        // Transaksi yang sudah dibaca langsung dihapus dari database;
+        // stok tetap hidup sampai kondisinya terselesaikan.
+        if ($notification->type === 'TRANSACTION') {
+            $notification->delete();
+            return;
+        }
         $notification->markAsRead();
     }
 
@@ -66,7 +72,7 @@ class NotificationService
         $this->baseQuery($user)
             ->whereNull('read_at')
             ->where('type', 'TRANSACTION')
-            ->update(['read_at' => now()]);
+            ->delete();
     }
 
     public function cleanup(int $days = 30): int
