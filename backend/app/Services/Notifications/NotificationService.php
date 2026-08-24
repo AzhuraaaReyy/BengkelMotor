@@ -49,11 +49,16 @@ class NotificationService
 
     public function hasUnreadStockForProduct(User $user, int $productId): bool
     {
+        return $this->getUnreadStockForProduct($user, $productId) !== null;
+    }
+
+    public function getUnreadStockForProduct(User $user, int $productId): ?Notification
+    {
         return Notification::where('user_id', $user->id)
             ->where('type', 'STOCK')
             ->whereNull('read_at')
             ->whereRaw("CAST(data->>'$.product_id' AS UNSIGNED) = ?", [$productId])
-            ->exists();
+            ->first();
     }
 
     public function markAsRead(Notification $notification): void

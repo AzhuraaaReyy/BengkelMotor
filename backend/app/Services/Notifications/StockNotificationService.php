@@ -28,13 +28,21 @@ class StockNotificationService
         $users = User::where('is_active', true)->get();
 
         foreach ($users as $user) {
-            $exists = $this->notification->hasUnreadStockForProduct($user, $product->id);
+            $existing = $this->notification->getUnreadStockForProduct($user, $product->id);
             $isOut = $currentStock <= 0;
 
-            // 🚀 PERBAIKAN: Jika notifikasi lama sudah ada TAPI stok sekarang HABIS (<=0),
-            // tetap izinkan notifikasi baru dibuat agar kasir tahu stok benar-benar habis!
-            if ($exists && !$isOut) {
-                continue;
+            if ($existing) {
+                $data = $existing->data ?? [];
+                $existingStock = (int) ($data['current_stock'] ?? -1);
+                $existingOut = $existingStock <= 0;
+
+                // Lewati hanya bila kondisi identik; ganti snapshot usang
+                // agar "Stok Habis!" tidak menggantung setelah restock
+                // sebagian (mis. 0 -> 3 harus jadi "Stok Menipis 3").
+                if ($existingOut === $isOut && $existingStock === $currentStock) {
+                    continue;
+                }
+                $existing->delete();
             }
 
             $title = $isOut ? 'Stok Habis!' : 'Stok Menipis';

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Models\Expense;
 use App\Models\Product;
 use App\Models\StockMovement;
 use Tests\TestCase;
@@ -90,7 +91,7 @@ class ProductStockTest extends TestCase
         $this->assertSame(1, StockMovement::where('product_id', $product->id)->count());
     }
 
-    public function test_kasir_purchase_creates_linked_expense(): void
+    public function test_kasir_purchase_records_stock_only_without_expense(): void
     {
         $kasir = $this->cashier();
         $product = Product::factory()->create(['current_stock' => 5, 'purchase_price' => 15000]);
@@ -98,35 +99,43 @@ class ProductStockTest extends TestCase
         $response = $this->actingAs($kasir)->postJson("/api/v1/products/{$product->id}/adjust-stock", [
             'quantity' => 3,
             'type' => 'PURCHASE',
-            'note' => 'Beli oli',
+            'note' => 'Stok masuk oli',
         ]);
 
         $response->assertStatus(200)->assertJsonPath('data.current_stock', 8);
 
         $movement = StockMovement::where('product_id', $product->id)->first();
         $this->assertNotNull($movement);
-
-        $expense = \App\Models\Expense::where('stock_movement_id', $movement->id)->first();
-        $this->assertNotNull($expense);
-        $this->assertSame('STOCK_PURCHASE', $expense->source);
-        $this->assertSame('Pembelian Stok', $expense->category);
-        $this->assertEquals('45000.00', $expense->amount); // 3 × 15000
-        $this->assertEquals(3, (int) $expense->quantity);
-        $this->assertEquals($kasir->id, $expense->created_by);
+        $this->assertSame(StockMovement::TYPE_PURCHASE, $movement->type);
+        $this->assertEquals(3, (int) $movement->quantity_change);
+        $this->assertSame($kasir->id, $movement->created_by);
+        $this->assertSame(0, Expense::count());
     }
 
-    public function test_purchase_expense_is_locked_from_manual_update(): void
+    public function test_legacy_purchase_expense_is_locked_from_manual_update(): void
     {
         $admin = $this->admin();
         $product = Product::factory()->create(['current_stock' => 0, 'purchase_price' => 20000]);
-
-        $this->actingAs($admin)->postJson("/api/v1/products/{$product->id}/adjust-stock", [
+        $movement = StockMovement::create([
+            'product_id' => $product->id,
+            'type' => StockMovement::TYPE_PURCHASE,
+            'quantity_change' => 5,
+            'stock_before' => 0,
+            'stock_after' => 5,
+            'created_by' => $admin->id,
+            'note' => 'Legacy auto expense',
+            'created_at' => now(),
+        ]);
+        $expense = Expense::factory()->create([
+            'category' => 'Pembelian Stok',
+            'amount' => 100000,
+            'created_by' => $admin->id,
+            'source' => Expense::SOURCE_STOCK_PURCHASE,
+            'stock_movement_id' => $movement->id,
+            'item_name' => $product->name,
             'quantity' => 5,
-            'type' => 'PURCHASE',
-            'note' => 'Beli',
-        ])->assertStatus(200);
-
-        $expense = \App\Models\Expense::where('stock_movement_id', \App\Models\StockMovement::first()->id)->first();
+            'unit_price' => 20000,
+        ]);
 
         $response = $this->actingAs($admin)->putJson("/api/v1/expenses/{$expense->id}", [
             'amount' => 1,
@@ -195,6 +204,32 @@ class ProductStockTest extends TestCase
         $paged->assertStatus(200);
         $this->assertSame(5, count($paged->json('data.data')));
         $this->assertSame(5, $paged->json('data.per_page'));
+    }
+
+    public function test_creating_product_with_low_initial_stock_creates_notification(): void
+    {
+        // Gap: produk baru yang langsung dibuat dengan stok rendah harus
+        // menaikkan notifikasi stok tanpa menunggu penjualan/Atur Stok.
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->postJson('/api/v1/products', [
+            'name' => 'Oli Langka',
+            'unit' => 'pcs',
+            'purchase_price' => 10000,
+            'sale_price' => 15000,
+            'current_stock' => 2,
+            'min_stock' => 5,
+        ])->assertStatus(201);
+
+        $product = Product::where('name', 'Oli Langka')->first();
+        $this->assertNotNull($product);
+        $this->assertDatabaseHas('notifications', [
+            'type' => 'STOCK',
+            'title' => 'Stok Menipis',
+        ]);
+        $n = \App\Models\Notification::where('type', 'STOCK')->first();
+        $this->assertSame($product->id, (int) $n->data['product_id']);
+        $this->assertSame(2, (int) $n->data['current_stock']);
     }
 
     public function test_stock_adjustment_without_note_is_rejected(): void
@@ -288,8 +323,7 @@ class ProductStockTest extends TestCase
 
         $this->assertSame('IN', $byType['PURCHASE']['direction']);
         $this->assertSame($admin->name, $byType['PURCHASE']['created_by_name']);
-        // PURCHASE restock is linked to the auto-created expense.
-        $this->assertSame('200000.00', $byType['PURCHASE']['expense_amount']); // 10 × 20000
+        $this->assertNull($byType['PURCHASE']['expense_amount']);
 
         $this->assertSame('OUT', $byType['SALE']['direction']);
         $this->assertSame($sale->sale_code, $byType['SALE']['sale_code']);

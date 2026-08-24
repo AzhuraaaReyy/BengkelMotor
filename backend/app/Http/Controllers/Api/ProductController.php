@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\Audit\AuditService;
 use App\Services\Inventory\AdjustStockService;
+use App\Services\Notifications\StockNotificationService;
 use App\Support\CodeGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,8 @@ class ProductController extends Controller
 {
     public function __construct(
         private AdjustStockService $adjustStock,
-        private AuditService $audit
+        private AuditService $audit,
+        private StockNotificationService $stockNotification
     ) {}
 
     public function index(Request $request)
@@ -89,7 +91,7 @@ class ProductController extends Controller
         $limit = min(max($request->integer('limit', 100), 1), 500);
 
         $products = Product::where('is_active', true)
-            ->whereColumn('current_stock', '<=', 'min_stock')
+            ->where('current_stock', '<', 5)
             ->orderBy('current_stock')
             ->limit($limit)
             ->get()
@@ -139,7 +141,7 @@ class ProductController extends Controller
             'created_by_name' => $m->createdBy?->name,
             'note' => $m->note,
             'created_at' => $m->created_at,
-            // Expense auto-created by a PURCHASE restock (Fase 3.3).
+            // Nullable legacy value for historical STOCK_PURCHASE expenses.
             'expense_amount' => $m->expense?->amount,
         ];
     }
@@ -199,6 +201,12 @@ class ProductController extends Controller
             null,
             ['name' => $product->name, 'sku' => $product->sku]
         );
+
+        // Stok awal di bawah threshold harus langsung menaikkan notifikasi
+        // stok, sama seperti jalur penjualan dan Atur Stok.
+        if ($product->current_stock < 5) {
+            $this->stockNotification->check($product, (int) $product->current_stock);
+        }
 
         return response()->json(['data' => new ProductResource($product), 'message' => 'Produk dibuat.'], 201);
     }
