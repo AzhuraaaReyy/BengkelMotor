@@ -20,7 +20,7 @@ class ServiceController extends Controller
         // with a hard cap so a huge catalog cannot be dumped in one response.
         $perPage = $request->boolean('all')
             ? 1000
-            : min(max($request->integer('per_page', 15), 1), 500);
+            : min(max($request->integer('per_page', 10), 1), 500);
 
         $services = Service::query()
             ->when($request->search, fn($q, $s) => $q->where(
