@@ -16,6 +16,14 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         $this->app->instance(PaymentGateway::class, new FakePaymentGateway());
+
+        // Feature tests berperan sebagai SPA frontend asli: header ini
+        // membuat Sanctum memperlakukan request sebagai stateful sehingga
+        // sesi (StartSession) tersedia untuk cookie auth di semua rute API.
+        $this->withHeaders([
+            'Origin' => 'http://localhost:5173',
+            'Referer' => 'http://localhost:5173/',
+        ]);
     }
 
     protected function admin(array $attributes = []): User

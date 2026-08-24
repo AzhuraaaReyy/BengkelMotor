@@ -33,16 +33,15 @@ Route::prefix('v1')->group(function () {
     Route::post('payments/simulate/{saleCode}', [PaymentWebhookController::class, 'simulatePayment'])
         ->middleware('throttle:10,1');
 
-    // Public: auth (web middleware group starts the session so Sanctum SPA
-    // cookie auth can persist the logged-in user across requests).
+    // Public: auth (sesi dimulai oleh prepend di bootstrap/app.php sehingga
+    // Sanctum SPA cookie auth dapat mempertahankan user antar request).
     Route::prefix('auth')->group(function () {
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
         Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
         Route::get('me', [AuthController::class, 'me'])->middleware('auth:sanctum');
     });
 
-    // Protected API (web middleware group starts the session so Sanctum SPA
-    // cookie auth can resolve the authenticated user from the session).
+    // Protected API (sesi dimulai oleh prepend di bootstrap/app.php).
     // throttle:api protects heavy endpoints (dashboard/report/export) from DoS.
     Route::group(['middleware' => ['auth:sanctum', 'throttle:api']], function () {
 
@@ -67,8 +66,8 @@ Route::prefix('v1')->group(function () {
         Route::get('products/{product}/movements', [ProductController::class, 'movements']);
         Route::post('products', [ProductController::class, 'store'])->middleware('role:ADMIN');
         Route::put('products/{product}', [ProductController::class, 'update'])->middleware('role:ADMIN');
-        // Stock management (adjust/restock) — Admin only
-        Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->middleware('role:ADMIN');
+        // Stock management (adjust/restock) — Admin & Cashier
+        Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])->middleware('role:ADMIN,CASHIER');
 
         // Services (jasa)
         Route::get('services', [ServiceController::class, 'index']);
@@ -78,8 +77,8 @@ Route::prefix('v1')->group(function () {
         // Customers
         Route::get('customers', [CustomerController::class, 'index']);
         Route::get('customers/{customer}', [CustomerController::class, 'show']);
-        Route::post('customers', [CustomerController::class, 'store'])->middleware('role:ADMIN');
-        Route::put('customers/{customer}', [CustomerController::class, 'update'])->middleware('role:ADMIN');
+        Route::post('customers', [CustomerController::class, 'store'])->middleware('role:ADMIN,CASHIER');
+        Route::put('customers/{customer}', [CustomerController::class, 'update'])->middleware('role:ADMIN,CASHIER');
 
         // Mechanics
         Route::get('mechanics', [MechanicController::class, 'index']);
@@ -90,8 +89,8 @@ Route::prefix('v1')->group(function () {
         Route::get('service-orders', [ServiceOrderController::class, 'index']);
         Route::get('service-orders/{serviceOrder}', [ServiceOrderController::class, 'show']);
         Route::post('service-orders', [ServiceOrderController::class, 'store']);
-        Route::put('service-orders/{serviceOrder}', [ServiceOrderController::class, 'update'])->middleware('role:ADMIN');
-        Route::delete('service-orders/{serviceOrder}', [ServiceOrderController::class, 'destroy'])->middleware('role:ADMIN');
+        Route::put('service-orders/{serviceOrder}', [ServiceOrderController::class, 'update'])->middleware('role:ADMIN,CASHIER');
+        Route::delete('service-orders/{serviceOrder}', [ServiceOrderController::class, 'destroy'])->middleware('role:ADMIN,CASHIER');
 
         // Expenses (Admin only)
         Route::get('expenses', [ExpenseController::class, 'index'])->middleware('role:ADMIN');
