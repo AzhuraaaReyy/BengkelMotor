@@ -38,3 +38,8 @@ backend/storage/logs/*
 !backend/storage/logs/.gitignore
 backend/storage/pail
 backend/storage/*.key
+.superpowers
+.docs
+.agents
+cookies*.txt
+permasalahan.txt
