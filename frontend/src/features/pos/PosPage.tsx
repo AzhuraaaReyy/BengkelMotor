@@ -14,6 +14,7 @@ import { PAYMENT_METHODS } from "@/lib/constants";
 import { CustomerSelector } from "@/features/pos/CustomerSelector";
 import { usePos } from "@/features/pos/PosContext";
 import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
+import { RightCartSidebar } from "@/features/pos/RightCartSidebar";
 import type { Product, Service, Customer, PaymentMethod } from "@/types";
 import {
   Search,
@@ -22,6 +23,7 @@ import {
   X,
   Wallet,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 
 export function PosPage() {
@@ -56,6 +58,11 @@ export function PosPage() {
     "ALL" | "PRODUCT" | "SERVICE"
   >("ALL");
 
+  // =========================================================================
+  // PENAMBAHAN: State untuk batas tampilan produk pada tab 'Semua' (default 10)
+  // =========================================================================
+  const [visibleProductLimit, setVisibleProductLimit] = useState(10);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState(0);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -69,6 +76,30 @@ export function PosPage() {
     diagnosis_note: "",
     motorcycle_type: "",
   });
+
+  // =========================================================================
+  // PENAMBAHAN: Reset limit tampilan ke 10 jika pencarian / kategori berubah
+  // =========================================================================
+  useEffect(() => {
+    setVisibleProductLimit(10);
+  }, [search, categoryFilter]);
+
+  // =========================================================================
+  // PENAMBAHAN: Map kalkulasi stok tersisa secara realtime di UI
+  // =========================================================================
+  const remainingStockMap = useMemo(() => {
+    const map = new Map<number, number>();
+    products.forEach((p) => {
+      map.set(p.id, p.current_stock);
+    });
+    cart.forEach((item) => {
+      if (item.item_type === "PRODUCT" && item.product) {
+        const current = map.get(item.product.id) ?? item.product.current_stock;
+        map.set(item.product.id, current - item.quantity);
+      }
+    });
+    return map;
+  }, [products, cart]);
 
   const hasServiceItems = useMemo(
     () => cart.some((l) => l.item_type === "SERVICE"),
@@ -135,6 +166,20 @@ export function PosPage() {
     const q = search.toLowerCase();
     return services.filter((s) => s.name.toLowerCase().includes(q));
   }, [services, search, categoryFilter]);
+
+  // =========================================================================
+  // PENAMBAHAN: Pemotongan list produk aktif berdasar filter dan limit tab 'ALL'
+  // =========================================================================
+  const activeProducts = useMemo(() => {
+    return filteredProducts.filter((p) => p.is_active);
+  }, [filteredProducts]);
+
+  const displayedProducts = useMemo(() => {
+    if (categoryFilter === "ALL") {
+      return activeProducts.slice(0, visibleProductLimit);
+    }
+    return activeProducts.slice(0, 60);
+  }, [activeProducts, categoryFilter, visibleProductLimit]);
 
   const isOnlinePayment = ["QRIS", "VA"].includes(paymentMethod);
 
@@ -235,8 +280,9 @@ export function PosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-4 p-4 pb-24 md:-m-6 md:p-6 md:pb-6">
-      <div className="w-full space-y-6">
+    <div className="flex gap-6 min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-4 p-4 pb-24 md:-m-6 md:p-6 md:pb-6 items-start">
+      {/* Area Katalog (Kiri) */}
+      <div className="flex-1 min-w-0 space-y-6">
         {/* Search Bar + Filter Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
@@ -312,25 +358,27 @@ export function PosPage() {
                     Sparepart tidak ditemukan.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
-                    {filteredProducts
-                      .filter((p) => p.is_active)
-                      .slice(0, 60)
-                      .map((p) => {
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                      {displayedProducts.map((p) => {
                         const inCart = cart.some(
                           (c) =>
                             c.item_type === "PRODUCT" && c.product?.id === p.id,
                         );
+                        // PENAMBAHAN: Ambil stok sisa realtime dari map
+                        const currentStock =
+                          remainingStockMap.get(p.id) ?? p.current_stock;
+
                         return (
                           <button
                             key={p.id}
                             onClick={() => addProduct(p)}
-                            disabled={p.current_stock <= 0}
+                            disabled={currentStock <= 0}
                             className={`bg-white rounded-2xl p-3.5 border transition-all text-left flex items-center gap-3 relative group hover:shadow-md min-h-[104px] ${
                               inCart
                                 ? "border-blue-600 ring-1 ring-blue-600 bg-blue-50/20"
                                 : "border-slate-200/80 hover:border-blue-400"
-                            } ${p.current_stock <= 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                            } ${currentStock <= 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
                             {/* Gambar / Ikon Produk */}
                             <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
@@ -340,11 +388,11 @@ export function PosPage() {
                                   alt={p.name}
                                   className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display =
-                                      "none";
-                                    const parent = (
-                                      e.target as HTMLElement
-                                    ).parentElement;
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = "none";
+                                    const parent = (e.target as HTMLElement)
+                                      .parentElement;
                                     if (parent) {
                                       parent.innerHTML =
                                         '<span class="text-xl">⚙️</span>';
@@ -371,16 +419,16 @@ export function PosPage() {
                                 <div>
                                   <span
                                     className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block leading-none ${
-                                      p.current_stock <= 0
+                                      currentStock <= 0
                                         ? "bg-red-100 text-red-600"
-                                        : p.current_stock <= 5
+                                        : currentStock <= 5
                                           ? "bg-amber-100 text-amber-700"
                                           : "bg-emerald-100 text-emerald-700"
                                     }`}
                                   >
-                                    {p.current_stock <= 0
+                                    {currentStock <= 0
                                       ? "Stok Habis"
-                                      : `Stok: ${p.current_stock}`}
+                                      : `Stok: ${currentStock}`}
                                   </span>
                                 </div>
                               </div>
@@ -388,7 +436,26 @@ export function PosPage() {
                           </button>
                         );
                       })}
-                  </div>
+                    </div>
+
+                    {/* ========================================================================= */}
+                    {/* PENAMBAHAN: Tombol Tampilkan Lebih Banyak khusus untuk Tab 'Semua' (ALL)  */}
+                    {/* ========================================================================= */}
+                    {categoryFilter === "ALL" &&
+                      activeProducts.length > visibleProductLimit && (
+                        <div className="mt-4 text-center">
+                          <button
+                            onClick={() =>
+                              setVisibleProductLimit((prev) => prev + 20)
+                            }
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 text-blue-600 font-bold text-xs rounded-xl shadow-2xs transition-all active:scale-95"
+                          >
+                            <span>Tampilkan Lebih Banyak</span>
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                  </>
                 )}
               </div>
             )}
@@ -449,6 +516,11 @@ export function PosPage() {
         )}
       </div>
 
+      {/* ---------------- RIGHT CART SIDEBAR DESKTOP (FIXED POS) ---------------- */}
+      <div className="hidden xl:block w-80 shrink-0 sticky top-0 h-[calc(100vh-3rem)]">
+        <RightCartSidebar />
+      </div>
+
       {/* ---------------- TABLET & MOBILE BOTTOM BAR ---------------- */}
       {cart.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-3 xl:hidden">
@@ -503,6 +575,12 @@ export function PosPage() {
                     ? (item.product?.sale_price ?? 0)
                     : (item.service?.sale_price ?? 0);
 
+                // PENAMBAHAN: Pengecekan sisa stok produk di drawer keranjang
+                const currentStock =
+                  item.item_type === "PRODUCT" && item.product
+                    ? (remainingStockMap.get(item.product.id) ?? 0)
+                    : Infinity;
+
                 return (
                   <div
                     key={index}
@@ -539,7 +617,8 @@ export function PosPage() {
                         </span>
                         <button
                           onClick={() => updateQty(index, item.quantity + 1)}
-                          className="p-1 hover:bg-slate-100 rounded text-slate-600"
+                          disabled={currentStock <= 0}
+                          className="p-1 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
                         >
                           <PlusIcon className="h-3 w-3" />
                         </button>

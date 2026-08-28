@@ -1,34 +1,40 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
-import { StockBadge } from "@/components/ui/badges";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { useNotifications } from "@/lib/useNotifications";
 import { useAuth } from "@/app/auth/AuthContext";
-import {
-  getProductsApi,
-  createProductApi,
-  updateProductApi,
-  adjustStockApi,
-  getProductMovementsApi,
-  type ProductPayload,
-} from "@/lib/api/products";
+import { useProducts, useProductMovements } from "@/lib/useProducts";
+import type { ProductPayload } from "@/lib/api/products";
 import { formatRupiah, formatQuantity, formatDateTime } from "@/lib/formatters";
 import { STOCK_MOVEMENT_LABEL } from "@/lib/constants";
 import { PlusIcon, EditIcon } from "@/components/shared/icons";
 import { resizeImage } from "@/lib/imageUtils";
 import type { Product, StockMovement } from "@/types";
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Package,
+  History,
+  AlertTriangle,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Info,
+  Download,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 interface FormState {
   id?: number;
@@ -45,6 +51,10 @@ interface FormState {
   imagePreview: string | null;
 }
 
+interface ProductWithRowIndex extends Product {
+  rowIndex: number;
+}
+
 const emptyForm: FormState = {
   sku: "",
   name: "",
@@ -59,68 +69,871 @@ const emptyForm: FormState = {
   imagePreview: null,
 };
 
+const CATEGORY_FILTERS = [
+  { id: "ALL", label: "Semua" },
+  { id: "Oli", label: "Oli" },
+  { id: "Rem", label: "Rem" },
+  { id: "Pengapian", label: "Pengapian" },
+  { id: "Transmisi", label: "Transmisi" },
+  { id: "Rantai", label: "Rantai" },
+];
+
+// =========================================================================
+// 1. Sub-Komponen Reusable: Stock Adjustment Modal
+// =========================================================================
+function StockAdjustmentModal({
+  product,
+  onClose,
+  onSave,
+  saving,
+}: {
+  product: Product | null;
+  onClose: () => void;
+  onSave: (
+    type: "PURCHASE" | "ADJUSTMENT",
+    quantity: string,
+    note: string,
+  ) => void;
+  saving: boolean;
+}) {
+  const [adjustType, setAdjustType] = useState<"PURCHASE" | "ADJUSTMENT">(
+    "PURCHASE",
+  );
+  const [quantity, setQuantity] = useState("");
+  const [note, setNote] = useState("");
+
+  if (!product) return null;
+
+  const handleSave = () => {
+    onSave(adjustType, quantity, note);
+  };
+
+  return (
+    <Modal open={!!product} onClose={onClose} title="Atur Stok" size="md">
+      <div className="space-y-4 font-sans text-slate-800">
+        {/* Card Ringkasan Produk Top */}
+        <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+          <div className="h-12 w-12 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+            {product.image ? (
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Package className="h-6 w-6 text-slate-300" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-bold text-sm text-slate-900 leading-tight">
+                {product.name}
+              </h4>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                  product.is_active
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {product.is_active ? "Aktif" : "Nonaktif"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 font-medium mt-1">
+              SKU:{" "}
+              <span className="font-mono text-slate-600">{product.sku}</span> •{" "}
+              Kategori: {product.category || "General"}
+            </p>
+            <p className="text-xs text-slate-600 font-medium mt-1">
+              Stok saat ini:{" "}
+              <span className="font-bold text-blue-600">
+                {formatQuantity(product.current_stock)} {product.unit}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Pilihan Jenis Penyesuaian */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700 block">
+            Jenis Penyesuaian
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setAdjustType("PURCHASE")}
+              className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                adjustType === "PURCHASE"
+                  ? "border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20"
+                  : "border-slate-200 hover:border-slate-300 bg-white"
+              }`}
+            >
+              <div
+                className={`p-2 rounded-lg shrink-0 ${
+                  adjustType === "PURCHASE"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                <ArrowUpCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-800">
+                  Penambahan Stok
+                </p>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5 leading-snug">
+                  Menambah jumlah stok barang
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAdjustType("ADJUSTMENT")}
+              className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                adjustType === "ADJUSTMENT"
+                  ? "border-red-500 bg-red-50/50 ring-2 ring-red-500/20"
+                  : "border-slate-200 hover:border-slate-300 bg-white"
+              }`}
+            >
+              <div
+                className={`p-2 rounded-lg shrink-0 ${
+                  adjustType === "ADJUSTMENT"
+                    ? "bg-red-600 text-white"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                <ArrowDownCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-800">
+                  Pengurangan Stok
+                </p>
+                <p className="text-[11px] text-slate-400 font-medium mt-0.5 leading-snug">
+                  Mengurangi jumlah stok barang
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Input Jumlah */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-700 block">
+            {adjustType === "PURCHASE"
+              ? "Jumlah yang Ditambahkan"
+              : "Jumlah yang Dikurangi"}
+          </label>
+          <p className="text-[11px] text-slate-400">
+            {adjustType === "PURCHASE"
+              ? "Masukkan berapa banyak stok yang mau ditambahkan ke gudang"
+              : "Masukkan berapa banyak stok yang mau dikurangi dari gudang"}
+          </p>
+          <div className="relative flex items-center">
+            <input
+              type="number"
+              step={1}
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Contoh: 5"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3.5 pr-12 text-xs font-semibold text-slate-800 shadow-2xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <span className="absolute right-3.5 text-xs font-bold text-slate-400 pointer-events-none">
+              {product.unit}
+            </span>
+          </div>
+        </div>
+
+        {/* Input Catatan */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700">
+              Catatan (Wajib)
+            </label>
+            <span className="text-[10px] font-semibold text-slate-400">
+              {note.length}/100
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Catatan ini akan membantu kamu ingat kenapa stoknya berubah
+          </p>
+          <textarea
+            rows={2}
+            maxLength={100}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Contoh: Beli dari toko Sejahtera, atau Barang rusak/hilang"
+            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-800 shadow-2xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+          />
+        </div>
+
+        {/* Footer Actions */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl text-[11px] font-medium w-full sm:w-auto">
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              Semua perubahan stok akan tersimpan otomatis di riwayat.
+            </span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={saving}
+              className="px-3.5 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              loading={saving}
+              className="px-3.5 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+            >
+              Simpan Perubahan
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// =========================================================================
+// 2. Sub-Komponen Reusable: Stock History Modal (Presisi Sesuai Gambar)
+// =========================================================================
+function StockHistoryModal({
+  product,
+  movements,
+  loading,
+  onClose,
+}: {
+  product: Product | null;
+  movements: StockMovement[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const [directionFilter, setDirectionFilter] = useState<string>("ALL");
+
+  const filteredMovements = useMemo(() => {
+    return (movements || []).filter((m) => {
+      if (directionFilter !== "ALL" && m.direction !== directionFilter)
+        return false;
+      return true;
+    });
+  }, [movements, directionFilter]);
+
+  if (!product) return null;
+
+  const isLowStock = product.current_stock <= product.min_stock;
+  const isOutOfStock = product.current_stock <= 0;
+  const lastMovement = movements?.[0];
+
+  return (
+    <Modal open={!!product} onClose={onClose} size="lg" hideScrollbar={true}>
+      <div className="space-y-4 font-sans text-slate-800">
+        {/* Header Informatif Produk */}
+        <div className="flex items-start justify-between gap-4 pb-1">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="h-14 w-14 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Package className="h-7 w-7 text-slate-300" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-base text-slate-900 leading-snug truncate">
+                Riwayat Stok: {product.name}
+              </h3>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-medium truncate">
+                <span>
+                  SKU:{" "}
+                  <strong className="font-mono text-slate-600">
+                    {product.sku}
+                  </strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Kategori:{" "}
+                  <strong className="text-slate-600">
+                    {product.category || "General"}
+                  </strong>
+                </span>
+              </div>
+              <div className="mt-1">
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block ${
+                    product.is_active
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {product.is_active ? "Aktif" : "Nonaktif"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Summary Cards Panel */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/70">
+          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
+            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shrink-0">
+              <Package className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
+                Stok Saat Ini
+              </p>
+              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                {formatQuantity(product.current_stock)} {product.unit}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
+                Stok Minimum
+              </p>
+              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                {formatQuantity(product.min_stock)} {product.unit}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
+            <div>
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
+                Status Stok
+              </p>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block mt-1 ${
+                  isOutOfStock
+                    ? "bg-red-100 text-red-700"
+                    : isLowStock
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-emerald-100 text-emerald-700"
+                }`}
+              >
+                {isOutOfStock ? "Habis" : isLowStock ? "Menipis" : "Aman"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Clock className="h-4 w-4 text-slate-400 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
+                Terakhir Diperbarui
+              </p>
+              <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">
+                {lastMovement ? formatDateTime(lastMovement.created_at) : "-"}
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium truncate">
+                Oleh: {lastMovement?.created_by_name || "Sistem"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+       
+
+        {/* Tabel Data Riwayat */}
+        {loading ? (
+          <div className="py-12">
+            <LoadingState />
+          </div>
+        ) : filteredMovements.length === 0 ? (
+          <div className="bg-white rounded-2xl p-10 text-center border border-slate-200/80 text-slate-400 space-y-2">
+            <History className="h-8 w-8 mx-auto stroke-[1.5] text-slate-300" />
+            <p className="text-xs font-medium">
+              Tidak ada catatan riwayat pergerakan stok.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Tampilan Desktop & Tablet (>= 640px) */}
+            <div className="hidden sm:block overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
+              <div className="max-h-[320px] overflow-y-auto hide-scrollbar">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-xs">
+                    <tr>
+                      <th className="py-3 px-4">ARAH</th>
+                      <th className="py-3 px-4">TIPE</th>
+                      <th className="py-3 px-4 text-center">PERUBAHAN</th>
+                      <th className="py-3 px-4 text-center">SEBELUM</th>
+                      <th className="py-3 px-4 text-center">SESUDAH</th>
+                      <th className="py-3 px-4">PETUGAS</th>
+                      <th className="py-3 px-4">KETERANGAN</th>
+                      <th className="py-3 px-4 text-right">WAKTU</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {filteredMovements.map((r) => {
+                      const isPositive = r.quantity_change > 0;
+                      return (
+                        <tr
+                          key={r.id}
+                          className="hover:bg-slate-50/70 transition-colors"
+                        >
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] ${
+                                isPositive
+                                  ? "bg-emerald-100/70 text-emerald-700"
+                                  : "bg-red-100/70 text-red-700"
+                              }`}
+                            >
+                              {isPositive ? (
+                                <ArrowUpCircle className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDownCircle className="h-3.5 w-3.5" />
+                              )}
+                              {isPositive ? "Masuk" : "Keluar"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px]">
+                              {(STOCK_MOVEMENT_LABEL as Record<string, string>)[
+                                r.type
+                              ] || r.type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <span
+                              className={`font-black tabular-nums text-xs ${
+                                isPositive ? "text-emerald-600" : "text-red-600"
+                              }`}
+                            >
+                              {isPositive ? "+" : ""}
+                              {formatQuantity(r.quantity_change)} {product.unit}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap font-semibold text-slate-500">
+                            {r.stock_before ?? "-"}
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-slate-900">
+                            {r.stock_after ?? "-"}
+                          </td>
+                          <td className="py-3 px-4 whitespace-nowrap font-semibold text-slate-700">
+                            {r.created_by_name || "Sistem"}
+                          </td>
+                          <td className="py-3 px-4 text-slate-500 max-w-[180px] truncate">
+                            {r.note || "-"}
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap text-slate-400 text-[11px]">
+                            {formatDateTime(r.created_at)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Tampilan Mobile (< 640px) */}
+            <div className="sm:hidden space-y-2.5 max-h-[340px] overflow-y-auto hide-scrollbar">
+              {filteredMovements.map((r) => {
+                const isPositive = r.quantity_change > 0;
+                return (
+                  <div
+                    key={r.id}
+                    className="p-3 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                            isPositive
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {isPositive ? "Masuk" : "Keluar"}
+                        </span>
+                        <span className="font-bold text-xs text-slate-800">
+                          {(STOCK_MOVEMENT_LABEL as Record<string, string>)[
+                            r.type
+                          ] || r.type}
+                        </span>
+                      </div>
+                      <span
+                        className={`font-black text-xs tabular-nums ${
+                          isPositive ? "text-emerald-600" : "text-red-600"
+                        }`}
+                      >
+                        {isPositive ? "+" : ""}
+                        {formatQuantity(r.quantity_change)} {product.unit}
+                      </span>
+                    </div>
+
+                    {/* Stok Sebelum & Sesudah */}
+                    <div className="flex items-center justify-center gap-3 py-2 bg-slate-50/50 rounded-lg border border-slate-100">
+                      <div className="text-center">
+                        <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">
+                          Sebelum
+                        </p>
+                        <p className="text-xs font-bold text-slate-600 tabular-nums">
+                          {r.stock_before ?? "-"}{" "}
+                          {r.stock_before != null ? product.unit : ""}
+                        </p>
+                      </div>
+                      <div className="h-8 w-px bg-slate-200"></div>
+                      <div className="text-center">
+                        <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">
+                          Sesudah
+                        </p>
+                        <p className="text-xs font-bold text-slate-900 tabular-nums">
+                          {r.stock_after ?? "-"}{" "}
+                          {r.stock_after != null ? product.unit : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    {r.note && (
+                      <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl font-medium border border-slate-100 leading-snug">
+                        {r.note}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                      <span>Petugas: {r.created_by_name || "Sistem"}</span>
+                      <span>{formatDateTime(r.created_at)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Footer Pagination */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>
+            Menampilkan 1 - {filteredMovements.length} dari{" "}
+            {filteredMovements.length} riwayat
+          </span>
+
+          <div className="flex items-center gap-1">
+            <button
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 disabled:opacity-40"
+              disabled
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold text-xs">
+              1
+            </span>
+            <button
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 disabled:opacity-40"
+              disabled
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// =========================================================================
+// 3. Mobile Card & Grid Item Komponen Halaman Produk
+// =========================================================================
+function MobileProductCard({
+  product,
+  isAdmin,
+  onEdit,
+  onAdjust,
+  onMovements,
+}: {
+  product: ProductWithRowIndex;
+  isAdmin: boolean;
+  onEdit: (p: Product) => void;
+  onAdjust: (p: Product) => void;
+  onMovements: (p: Product) => void;
+}) {
+  const isOutOfStock = product.current_stock <= 0;
+  const isLowStock = product.current_stock <= product.min_stock;
+
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-3">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Package className="h-5 w-5 text-slate-300" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-mono font-semibold text-slate-400 block">
+                #{product.rowIndex} • {product.sku}
+              </span>
+              <h3 className="font-bold text-xs text-slate-800 leading-snug break-words">
+                {product.name}
+              </h3>
+              <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                {product.category || "General"}
+              </p>
+            </div>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => onEdit(product)}
+              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-50 shrink-0"
+              title="Edit Produk"
+            >
+              <EditIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium">Harga Jual</p>
+            <p className="text-xs font-black text-blue-600">
+              {formatRupiah(product.sale_price)}
+            </p>
+          </div>
+          <div>
+            <span
+              className={`text-[10px] font-bold px-2 py-1 rounded-md inline-block whitespace-nowrap ${
+                isOutOfStock
+                  ? "bg-red-50 text-red-600"
+                  : isLowStock
+                    ? "bg-amber-50 text-amber-700"
+                    : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              Stok: {product.current_stock} {product.unit}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => onAdjust(product)}
+            className="flex-1 text-xs py-1.5 bg-blue-600 text-white rounded-xl"
+          >
+            Atur Stok
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onMovements(product)}
+            className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-xl"
+          >
+            Riwayat
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductCardItem({
+  product,
+  isAdmin,
+  onEdit,
+  onAdjust,
+  onMovements,
+}: {
+  product: Product;
+  isAdmin: boolean;
+  onEdit: (p: Product) => void;
+  onAdjust: (p: Product) => void;
+  onMovements: (p: Product) => void;
+}) {
+  const isOutOfStock = product.current_stock <= 0;
+  const isLowStock = product.current_stock <= product.min_stock;
+
+  return (
+    <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group">
+      <div>
+        <div className="relative w-full h-36 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden mb-3">
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <Package className="h-10 w-10 text-slate-300 stroke-[1.5]" />
+          )}
+          <div className="absolute top-2 left-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-white/90 backdrop-blur-xs text-slate-700 shadow-2xs border border-slate-200/50">
+              {product.category || "General"}
+            </span>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => onEdit(product)}
+              className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 backdrop-blur-xs text-slate-500 hover:text-blue-600 shadow-2xs transition-colors"
+            >
+              <EditIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="space-y-1">
+          <p className="text-[11px] font-mono text-slate-400 font-semibold">
+            {product.sku}
+          </p>
+          <h3 className="font-bold text-sm text-slate-800 leading-snug break-words group-hover:text-blue-600 transition-colors">
+            {product.name}
+          </h3>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-slate-100 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium">Harga Jual</p>
+            <p className="text-sm font-black text-blue-600">
+              {formatRupiah(product.sale_price)}
+            </p>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2.5 py-1 rounded-lg inline-flex items-center gap-1 shrink-0 ${
+              isOutOfStock
+                ? "bg-red-50 text-red-600 border border-red-100"
+                : isLowStock
+                  ? "bg-amber-50 text-amber-700 border border-amber-100"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+            }`}
+          >
+            {isOutOfStock ? (
+              <>
+                <AlertTriangle className="h-3 w-3" /> Habis
+              </>
+            ) : (
+              `Stok: ${product.current_stock} ${product.unit}`
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => onAdjust(product)}
+            className="flex-1 text-xs py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+          >
+            Atur Stok
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onMovements(product)}
+            className="px-2.5 py-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl"
+          >
+            <History className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// 4. Komponen Utama: ProductsPage
+// =========================================================================
 export function ProductsPage() {
   const toast = useToast();
   const { refresh: refreshNotifications } = useNotifications();
-  const [data, setData] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 200);
   const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("TABLE");
 
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+
+  const {
+    products: data,
+    lastPage,
+    total,
+    isLoading: loading,
+    error: loadError,
+    createProduct,
+    updateProduct,
+    adjustStock,
+  } = useProducts({
+    search: debouncedSearch || undefined,
+    page,
+    per_page: 12,
+    include_cost: 1,
+  });
+
+  const error = loadError
+    ? (loadError as { message?: string }).message || "Gagal memuat produk."
+    : null;
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
 
   const [adjustTarget, setAdjustTarget] = useState<Product | null>(null);
-  const [adjustType, setAdjustType] = useState<"PURCHASE" | "ADJUSTMENT">(
-    "PURCHASE",
-  );
-  const [adjustQuantity, setAdjustQuantity] = useState<string>("");
-  const [adjustNote, setAdjustNote] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
 
   const [moveTarget, setMoveTarget] = useState<Product | null>(null);
-  const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [moveLoading, setMoveLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getProductsApi({
-        search: debouncedSearch || undefined,
-        page,
-        per_page: 10,
-        include_cost: 1,
-      });
-      setData(res.data);
-      setLastPage(res.last_page);
-      setTotal(res.total);
-    } catch (e) {
-      const err = e as { message?: string };
-      setError(err.message || "Gagal memuat produk.");
-    } finally {
-      setLoading(false);
+  const { movements, isLoading: moveLoading } = useProductMovements(
+    moveTarget?.id ?? 0,
+    { per_page: 20 },
+  );
+
+  const filteredProducts = useMemo<ProductWithRowIndex[]>(() => {
+    const filtered =
+      selectedCategory === "ALL"
+        ? data
+        : data.filter(
+            (p) => p.category?.toUpperCase() === selectedCategory.toUpperCase(),
+          );
+
+    return filtered.map((item, idx) => ({
+      ...item,
+      rowIndex: (page - 1) * 12 + idx + 1,
+    }));
+  }, [data, selectedCategory, page]);
+
+  const closeFormModal = () => {
+    if (form.imagePreview && form.imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(form.imagePreview);
     }
-  }, [debouncedSearch, page]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+    setForm(emptyForm);
+    setFormOpen(false);
+  };
 
   const openCreate = () => {
+    closeFormModal();
     setForm(emptyForm);
     setFormOpen(true);
   };
 
   const openEdit = (p: Product) => {
+    closeFormModal();
     setForm({
       id: p.id,
       sku: p.sku,
@@ -157,14 +970,13 @@ export function ProductsPage() {
           min_stock: Number(form.min_stock),
           is_active: form.is_active,
         };
-        // Only include image if user uploaded a new one
         if (form.image) {
           payload.image = form.image;
         }
-        await updateProductApi(form.id, payload);
+        await updateProduct({ id: form.id, payload });
         toast.success("Produk diperbarui.");
       } else {
-        await createProductApi({
+        await createProduct({
           sku: form.sku,
           name: form.name,
           category: form.category || undefined,
@@ -178,17 +990,14 @@ export function ProductsPage() {
         });
         toast.success("Produk dibuat.");
       }
-      setFormOpen(false);
-      load();
+      closeFormModal();
       refreshNotifications();
     } catch (e) {
       const err = e as { message?: string; errors?: Record<string, string[]> };
-      
-      // Show specific validation errors if available
       if (err.errors) {
         const errorMessages = Object.entries(err.errors)
-          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-          .join('; ');
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+          .join("; ");
         toast.error(errorMessages || err.message || "Gagal menyimpan produk.");
       } else {
         toast.error(err.message || "Gagal menyimpan produk.");
@@ -198,44 +1007,54 @@ export function ProductsPage() {
     }
   };
 
-  const doAdjust = async () => {
+  const doAdjust = async (
+    type: "PURCHASE" | "ADJUSTMENT",
+    adjustQuantity: string,
+    adjustNote: string,
+  ) => {
     if (!adjustTarget) return;
-    const quantity = Number(adjustQuantity);
+    let quantity = Number(adjustQuantity);
+
     if (!Number.isInteger(quantity) || quantity === 0) {
-      toast.error("Jumlah perubahan harus bilangan bulat (bukan nol).");
+      toast.error("Jumlah harus berupa angka bulat dan tidak boleh nol.");
       return;
     }
-    if (adjustType === "PURCHASE" && quantity < 0) {
-      toast.error("Jumlah ditambahkan tidak boleh negatif.");
+
+    if (quantity < 0) {
+      toast.error("Masukkan angka positif saja, tanpa tanda minus.");
       return;
     }
-    if (
-      adjustType === "ADJUSTMENT" &&
-      adjustTarget.current_stock + quantity < 0
-    ) {
-      toast.error("Stok tidak bisa menjadi negatif.");
+
+    if (type === "ADJUSTMENT") {
+      quantity = -Math.abs(quantity);
+    }
+
+    if (type === "ADJUSTMENT" && adjustTarget.current_stock + quantity < 0) {
+      toast.error("Stok tidak cukup untuk dikurangi sebanyak itu.");
       return;
     }
+
     if (!adjustNote.trim()) {
-      toast.error("Penyesuaian stok wajib menyertakan catatan.");
+      toast.error("Catatan wajib diisi.");
       return;
     }
+
     setAdjustSaving(true);
     try {
-      await adjustStockApi(adjustTarget.id, {
-        type: adjustType,
-        quantity,
-        note: adjustNote.trim(),
+      await adjustStock({
+        id: adjustTarget.id,
+        payload: {
+          type,
+          quantity,
+          note: adjustNote.trim(),
+        },
       });
       toast.success(
-        adjustType === "PURCHASE"
-          ? "Stok masuk berhasil dicatat."
-          : "Stok diperbarui.",
+        type === "PURCHASE"
+          ? "Stok berhasil ditambahkan!"
+          : "Stok berhasil dikurangi!",
       );
       setAdjustTarget(null);
-      setAdjustQuantity("");
-      setAdjustNote("");
-      load();
       refreshNotifications();
     } catch (e) {
       const err = e as { message?: string };
@@ -246,62 +1065,93 @@ export function ProductsPage() {
   };
 
   const openAdjust = (p: Product) => {
-    setAdjustType("PURCHASE");
-    setAdjustQuantity("");
-    setAdjustNote("");
     setAdjustTarget(p);
   };
 
-  const openMovements = async (p: Product) => {
+  const openMovements = (p: Product) => {
     setMoveTarget(p);
-    setMoveLoading(true);
-    try {
-      const res = await getProductMovementsApi(p.id, { per_page: 20 });
-      setMovements(res.data);
-    } catch (e) {
-      const err = e as { message?: string };
-      toast.error(err.message || "Gagal memuat riwayat stok.");
-    } finally {
-      setMoveLoading(false);
-    }
   };
 
-  const adjustQty = Number(adjustQuantity);
-  const previewAfter =
-    adjustTarget && Number.isFinite(adjustQty)
-      ? adjustTarget.current_stock + adjustQty
-      : null;
-  const columns: Column<Product>[] = [
+  // Kolom Tabel Desktop
+  const columns: Column<ProductWithRowIndex>[] = [
+    {
+      key: "no",
+      label: "NO",
+      render: (r) => (
+        <span className="font-semibold text-xs text-slate-400 px-1">
+          {r.rowIndex}
+        </span>
+      ),
+    },
     {
       key: "sku",
       label: "SKU",
       render: (r) => (
-        <span className="font-mono text-xs text-text-secondary">{r.sku}</span>
+        <div className="flex items-center gap-2.5 min-w-[120px]">
+          <div className="h-8 w-8 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+            {r.image ? (
+              <img
+                src={r.image}
+                alt={r.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Package className="h-3.5 w-3.5 text-slate-300" />
+            )}
+          </div>
+          <span className="font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">
+            {r.sku}
+          </span>
+        </div>
       ),
     },
     {
       key: "name",
-      label: "Nama",
+      label: "NAMA",
       render: (r) => (
-        <span className="font-medium text-text-primary">{r.name}</span>
+        <span className="font-bold text-xs text-slate-800 leading-normal block break-words min-w-[140px]">
+          {r.name}
+        </span>
       ),
     },
-    { key: "category", label: "Kategori", render: (r) => r.category || "-" },
+    {
+      key: "category",
+      label: "KATEGORI",
+      render: (r) => (
+        <span className="text-xs text-slate-600 font-medium whitespace-nowrap">
+          {r.category || "-"}
+        </span>
+      ),
+    },
     {
       key: "sale_price",
-      label: "Harga Jual",
+      label: "HARGA JUAL",
       render: (r) => (
-        <span className="tabular-nums">{formatRupiah(r.sale_price)}</span>
+        <span className="font-bold text-xs text-blue-600 whitespace-nowrap">
+          {formatRupiah(r.sale_price)}
+        </span>
       ),
     },
     {
       key: "stock",
-      label: "Stok",
-      render: (r) => <StockBadge current={r.current_stock} min={r.min_stock} />,
+      label: "STOK",
+      render: (r) => (
+        <span
+          className={`text-xs font-bold px-2.5 py-1 rounded-md inline-block whitespace-nowrap ${
+            r.current_stock <= 0
+              ? "bg-red-50 text-red-600 border border-red-100"
+              : r.current_stock <= r.min_stock
+                ? "bg-amber-50 text-amber-700 border border-amber-100"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+          }`}
+        >
+          {r.current_stock} {r.unit}
+        </span>
+      ),
     },
     {
       key: "is_active",
-      label: "Status",
+      label: "STATUS",
       render: (r) =>
         r.is_active ? (
           <Badge tone="success">Aktif</Badge>
@@ -311,13 +1161,14 @@ export function ProductsPage() {
     },
     {
       key: "actions",
-      label: "Aksi",
+      label: "AKSI",
       render: (r) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
           <Button
             variant="primary"
             size="sm"
             onClick={() => openAdjust(r)}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs px-2.5 py-1 shadow-xs"
           >
             Atur Stok
           </Button>
@@ -325,14 +1176,14 @@ export function ProductsPage() {
             variant="secondary"
             size="sm"
             onClick={() => openMovements(r)}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs px-2.5 py-1"
           >
             Riwayat
           </Button>
           {isAdmin && (
             <button
-              className="rounded p-1 text-text-secondary hover:text-primary"
+              className="rounded-lg p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors"
               onClick={() => openEdit(r)}
-              aria-label="Edit"
             >
               <EditIcon className="h-4 w-4" />
             </button>
@@ -343,92 +1194,127 @@ export function ProductsPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4 font-sans text-slate-800">
       <PageHeader
-        actions={isAdmin ? (
-          <Button onClick={openCreate}>
-            <PlusIcon className="h-4 w-4" />
-            Produk Baru
-          </Button>
-        ) : undefined}
+        actions={
+          isAdmin ? (
+            <Button
+              onClick={openCreate}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Produk Baru
+            </Button>
+          ) : undefined
+        }
       />
 
-      <Card className="mb-4">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Cari nama / SKU produk..."
-        />
-      </Card>
+      {/* Control Panel Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama atau SKU produk..."
+            className="w-full rounded-xl border border-slate-200/80 bg-white py-2 pl-10 pr-4 text-xs font-medium text-slate-800 shadow-2xs placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
 
+        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+          <div className="bg-white p-1 rounded-xl border border-slate-200/80 flex gap-1 shadow-2xs overflow-x-auto hide-scrollbar">
+            {CATEGORY_FILTERS.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  selectedCategory === cat.id
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white p-1 rounded-xl border border-slate-200/80 flex gap-1 shadow-2xs">
+            <button
+              onClick={() => setViewMode("GRID")}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === "GRID"
+                  ? "bg-slate-100 text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("TABLE")}
+              className={`p-1.5 rounded-lg transition-colors ${
+                viewMode === "TABLE"
+                  ? "bg-slate-100 text-blue-600"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={load} />
+        <ErrorState message={error} onRetry={() => setPage(page)} />
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="hidden lg:block">
-            <DataTable
-              columns={columns}
-              data={data}
-              keyExtractor={(r) => r.id}
-            />
-          </div>
-
-          {/* Mobile & tablet cards */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
-            {data.map((p) => (
-              <div key={p.id} className="card space-y-2 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-text-primary">
-                      {p.name}
-                    </p>
-                    <p className="font-mono text-xs text-text-secondary">
-                      {p.sku}
-                    </p>
-                  </div>
-                  {isAdmin && (
-                    <button
-                      className="shrink-0 rounded p-1 text-text-secondary hover:text-primary"
-                      onClick={() => openEdit(p)}
-                      aria-label="Edit"
-                    >
-                      <EditIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-control bg-surface-2 px-2 py-0.5 text-text-secondary">
-                    {p.category || "-"}
-                  </span>
-                  <StockBadge current={p.current_stock} min={p.min_stock} />
-                </div>
-                <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-                  <span className="text-sm font-semibold text-text-primary">
-                    {formatRupiah(p.sale_price)}
-                  </span>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => openAdjust(p)}
-                    >
-                      Atur Stok
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => openMovements(p)}
-                    >
-                      Riwayat
-                    </Button>
-                  </div>
-                </div>
+          {filteredProducts.length === 0 ? (
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 text-slate-400 space-y-2">
+              <Package className="h-10 w-10 mx-auto stroke-[1.5] text-slate-300" />
+              <p className="text-xs font-medium">Produk tidak ditemukan.</p>
+            </div>
+          ) : viewMode === "GRID" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredProducts.map((p) => (
+                <ProductCardItem
+                  key={p.id}
+                  product={p}
+                  isAdmin={isAdmin}
+                  onEdit={openEdit}
+                  onAdjust={openAdjust}
+                  onMovements={openMovements}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Mobile Card List (< 1024px) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden">
+                {filteredProducts.map((p) => (
+                  <MobileProductCard
+                    key={p.id}
+                    product={p}
+                    isAdmin={isAdmin}
+                    onEdit={openEdit}
+                    onAdjust={openAdjust}
+                    onMovements={openMovements}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+
+              {/* Desktop Table (>= 1024px) */}
+              <div className="hidden lg:block bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                <DataTable
+                  columns={columns}
+                  data={filteredProducts}
+                  keyExtractor={(r) => r.id}
+                />
+              </div>
+            </>
+          )}
 
           <Pagination
             currentPage={page}
@@ -439,21 +1325,17 @@ export function ProductsPage() {
         </>
       )}
 
-      {/* Product form modal */}
+      {/* Modal Form Tambah/Edit Produk */}
       <Modal
         open={formOpen}
-        onClose={() => {
-          if (form.imagePreview) URL.revokeObjectURL(form.imagePreview);
-          setForm(emptyForm);
-          setFormOpen(false);
-        }}
+        onClose={closeFormModal}
         title={form.id ? "Edit Produk" : "Produk Baru"}
         size="lg"
         footer={
           <>
             <Button
               variant="secondary"
-              onClick={() => setFormOpen(false)}
+              onClick={closeFormModal}
               disabled={saving}
             >
               Batal
@@ -542,7 +1424,7 @@ export function ProductsPage() {
               label="Foto Produk"
               name="image"
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               onChange={async (e) => {
                 const file = e.target.files?.[0] || null;
                 if (!file) {
@@ -551,245 +1433,56 @@ export function ProductsPage() {
                 }
 
                 try {
-                  // Resize image to max 1024x1024px
                   const resizedFile = await resizeImage(file, 1024, 1024);
+                  if (
+                    form.imagePreview &&
+                    form.imagePreview.startsWith("blob:")
+                  ) {
+                    URL.revokeObjectURL(form.imagePreview);
+                  }
                   const preview = URL.createObjectURL(resizedFile);
-                  setForm({ ...form, image: resizedFile, imagePreview: preview });
+                  setForm({
+                    ...form,
+                    image: resizedFile,
+                    imagePreview: preview,
+                  });
                 } catch {
-                  toast.error('Gagal memproses gambar. Silakan coba lagi.');
+                  toast.error("Gagal memproses gambar. Silakan coba lagi.");
                   setForm({ ...form, image: null, imagePreview: null });
                 }
               }}
             />
-            <p className="mt-1 text-xs text-text-secondary">
-              Gambar akan otomatis diresize ke maksimal 1024x1024px. Ukuran file maks. 5MB.
-            </p>
           </div>
           {form.imagePreview && (
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-text-secondary mb-1">
+              <label className="mb-1 block text-xs font-medium text-slate-500">
                 Preview
               </label>
               <img
                 src={form.imagePreview}
                 alt="Preview"
-                className="w-32 h-32 object-cover rounded-lg border border-border"
+                className="h-32 w-32 rounded-xl border border-slate-200 object-cover"
               />
             </div>
           )}
         </div>
       </Modal>
 
-      {/* Stock adjustment modal */}
-      <Modal
-        open={!!adjustTarget}
+      {/* Modal Atur Stok */}
+      <StockAdjustmentModal
+        product={adjustTarget}
         onClose={() => setAdjustTarget(null)}
-        title="Atur Stok"
-        size="sm"
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setAdjustTarget(null)}
-              disabled={adjustSaving}
-            >
-              Batal
-            </Button>
-            <Button onClick={doAdjust} loading={adjustSaving}>
-              Simpan
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-text-secondary">
-            {adjustTarget?.name} — stok saat ini:{" "}
-            <span className="font-bold text-text-primary">
-              {formatQuantity(adjustTarget?.current_stock ?? 0)}{" "}
-              {adjustTarget?.unit}
-            </span>
-          </p>
-          <Select
-            label="Jenis Perubahan"
-            name="adjustType"
-            value={adjustType}
-            onChange={(e) =>
-              setAdjustType(e.target.value as "PURCHASE" | "ADJUSTMENT")
-            }
-            options={[
-              { value: "PURCHASE", label: "Pembelian / Restock" },
-              { value: "ADJUSTMENT", label: "Penyesuaian" },
-            ]}
-          />
-          {adjustType === "PURCHASE" ? (
-            <>
-              <Input
-                label="Jumlah Ditambahkan (dari stok saat ini)"
-                name="quantity"
-                type="number"
-                min={1}
-                step={1}
-                value={adjustQuantity}
-                onChange={(e) => setAdjustQuantity(e.target.value)}
-              />
-              {previewAfter !== null && (
-                <div className="rounded-control border border-border bg-surface-2 px-4 py-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Stok akhir</span>
-                    <span className="font-bold text-text-primary">
-                      {formatQuantity(previewAfter)} {adjustTarget?.unit}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    Stok masuk tidak membuat pengeluaran otomatis.
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <Input
-                label="Jumlah Perubahan (bertanda, minus = pengurangan)"
-                name="quantity"
-                type="number"
-                step={1}
-                value={adjustQuantity}
-                onChange={(e) => setAdjustQuantity(e.target.value)}
-              />
-              {previewAfter !== null && (
-                <div className="rounded-control border border-border bg-surface-2 px-4 py-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-text-secondary">Stok akhir</span>
-                    <span
-                      className={`font-bold ${
-                        previewAfter < 0 ? "text-danger" : "text-text-primary"
-                      }`}
-                    >
-                      {formatQuantity(previewAfter)} {adjustTarget?.unit}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    Penyesuaian tidak membuat pengeluaran otomatis.
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-          <Input
-            label="Catatan (wajib)"
-            name="note"
-            value={adjustNote}
-            onChange={(e) => setAdjustNote(e.target.value)}
-          />
-        </div>
-      </Modal>
+        onSave={doAdjust}
+        saving={adjustSaving}
+      />
 
-      {/* Movement history modal */}
-      <Modal
-        open={!!moveTarget}
+      {/* Modal Riwayat Stok Sesuai Referensi Gambar */}
+      <StockHistoryModal
+        product={moveTarget}
+        movements={movements}
+        loading={moveLoading}
         onClose={() => setMoveTarget(null)}
-        title={`Riwayat Stok: ${moveTarget?.name ?? ""}`}
-        size="lg"
-      >
-        {moveLoading ? (
-          <LoadingState />
-        ) : (
-          <>
-            {moveTarget && (
-              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-control border border-border bg-surface-2 px-4 py-3">
-                <span className="text-sm text-text-secondary">
-                  Stok saat ini:{" "}
-                  <span className="font-bold text-text-primary">
-                    {formatQuantity(moveTarget.current_stock)} {moveTarget.unit}
-                  </span>
-                </span>
-                <span className="text-sm text-text-secondary">
-                  Stok minimum:{" "}
-                  <span className="font-bold text-text-primary">
-                    {formatQuantity(moveTarget.min_stock)} {moveTarget.unit}
-                  </span>
-                </span>
-                {moveTarget.current_stock === 0 ? (
-                  <Badge tone="danger">Habis</Badge>
-                ) : moveTarget.current_stock <= moveTarget.min_stock ? (
-                  <Badge tone="warning">Menipis</Badge>
-                ) : (
-                  <Badge tone="success">Aman</Badge>
-                )}
-              </div>
-            )}
-            {movements.length === 0 ? (
-              <p className="py-8 text-center text-sm text-text-secondary">
-                Belum ada pergerakan stok.
-              </p>
-            ) : (
-              <DataTable
-                columns={[
-                  {
-                    key: "direction",
-                    label: "Arah",
-                    render: (r) =>
-                      r.direction === "IN" ? (
-                        <Badge tone="success">Stok Masuk</Badge>
-                      ) : (
-                        <Badge tone="danger">Stok Keluar</Badge>
-                      ),
-                  },
-                  {
-                    key: "type",
-                    label: "Tipe",
-                    render: (r) => (
-                      <Badge tone="info">{STOCK_MOVEMENT_LABEL[r.type]}</Badge>
-                    ),
-                  },
-                  {
-                    key: "qty",
-                    label: "Perubahan",
-                    render: (r) => (
-                      <span
-                        className={`tabular-nums ${r.quantity_change > 0 ? "text-success" : "text-danger"}`}
-                      >
-                        {r.quantity_change > 0 ? "+" : ""}
-                        {formatQuantity(r.quantity_change)}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "before",
-                    label: "Sebelum",
-                    render: (r) => formatQuantity(r.stock_before),
-                  },
-                  {
-                    key: "after",
-                    label: "Sesudah",
-                    render: (r) => formatQuantity(r.stock_after),
-                  },
-                  {
-                    key: "actor",
-                    label: "Petugas",
-                    render: (r) => r.created_by_name || "-",
-                  },
-                  {
-                    key: "note",
-                    label: "Keterangan",
-                    render: (r) =>
-                      [r.sale_code ? `Transaksi ${r.sale_code}` : null, r.note]
-                        .filter(Boolean)
-                        .join(" — ") || "-",
-                  },
-                  {
-                    key: "at",
-                    label: "Waktu",
-                    render: (r) => formatDateTime(r.created_at),
-                  },
-                ]}
-                data={movements}
-                keyExtractor={(r) => r.id}
-              />
-            )}
-          </>
-        )}
-      </Modal>
+      />
     </div>
   );
 }

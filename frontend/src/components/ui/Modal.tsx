@@ -8,6 +8,8 @@ interface ModalProps {
   children: ReactNode;
   size?: "sm" | "md" | "lg";
   footer?: ReactNode;
+  hideScrollbar?: boolean;
+  contentClassName?: string;
 }
 
 const sizes = {
@@ -23,6 +25,8 @@ export function Modal({
   children,
   size = "md",
   footer,
+  hideScrollbar = false,
+  contentClassName = "",
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -48,10 +52,10 @@ export function Modal({
         aria-hidden="true"
       />
       <div
-        className={`relative z-10 w-full ${sizes[size]} rounded-card bg-surface shadow-card`}
+        className={`relative z-10 w-full ${sizes[size]} rounded-card bg-surface shadow-card max-h-[90vh] flex flex-col overflow-hidden`}
       >
         {title && (
-          <header className="flex items-center justify-between border-b border-border px-5 py-4">
+          <header className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0 bg-surface">
             <h2 className="text-base font-semibold text-text-primary">
               {title}
             </h2>
@@ -64,9 +68,18 @@ export function Modal({
             </button>
           </header>
         )}
-        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
+
+        {/* Area Body Modal dengan dukungan hide-scrollbar */}
+        <div
+          className={`max-h-[75vh] overflow-y-auto px-5 py-4 flex-1 ${
+            hideScrollbar ? "hide-scrollbar" : ""
+          } ${contentClassName}`}
+        >
+          {children}
+        </div>
+
         {footer && (
-          <footer className="flex justify-end gap-2 border-t border-border px-5 py-4">
+          <footer className="flex justify-end gap-2 border-t border-border px-5 py-4 shrink-0 bg-surface">
             {footer}
           </footer>
         )}
