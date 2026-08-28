@@ -394,11 +394,11 @@ Business rule:
 | amount | DECIMAL(15,2) | NO | > 0 |
 | description | VARCHAR(500) | YES | |
 | created_by | BIGINT UNSIGNED | NO | FK -> users.id |
-| stock_movement_id | BIGINT UNSIGNED | YES | FK -> stock_movements.id, SET NULL; diisi untuk expense otomatis dari restock |
-| source | VARCHAR(20) | YES | NULL = MANUAL; `STOCK_PURCHASE` = otomatis dari restock berbayar |
-| item_name | VARCHAR(160) | YES | nama barang (restock) |
-| quantity | INTEGER | YES | jumlah barang (restock) |
-| unit_price | DECIMAL(15,2) | YES | harga beli per unit (restock) |
+| stock_movement_id | BIGINT UNSIGNED | YES | FK -> stock_movements.id, SET NULL; terisi pada expense legacy restock |
+| source | VARCHAR(20) | YES | NULL = MANUAL; `STOCK_PURCHASE` = histori legacy restock |
+| item_name | VARCHAR(160) | YES | nama barang legacy restock |
+| quantity | INTEGER | YES | jumlah barang legacy restock |
+| unit_price | DECIMAL(15,2) | YES | harga beli per unit legacy restock |
 | payment_method | VARCHAR(20) | YES | dicadangkan (tidak diisi dari Atur Stok) |
 | created_at | TIMESTAMP | YES | |
 | updated_at | TIMESTAMP | YES | |
@@ -406,7 +406,7 @@ Business rule:
 Constraints:
 
 - CHECK `amount > 0`.
-- Expense `source = 'STOCK_PURCHASE'` dibuat otomatis oleh `AdjustStockService` dalam satu transaksi DB dengan perubahan stok (Rules.md §9); **tidak dapat diedit manual** (ExpenseController::update → 403 `EXPENSE_LOCKED`). Koreksi melalui Atur Stok baru.
+- Expense legacy `source = 'STOCK_PURCHASE'` **tidak dapat diedit manual** (ExpenseController::update → 403 `EXPENSE_LOCKED`). Atur Stok baru tidak lagi membuat expense otomatis.
 
 Indexes:
 

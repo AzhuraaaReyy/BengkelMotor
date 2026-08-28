@@ -48,7 +48,7 @@ class PosCheckoutTest extends TestCase
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
 
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $cashierView = $this->actingAs($cashier)->getJson("/api/v1/sales/{$saleId}");
         $cashierView->assertJsonMissingPath('data.items.0.purchase_price_snapshot');
@@ -66,7 +66,8 @@ class PosCheckoutTest extends TestCase
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 5]],
         ])->json('data.id');
 
-        $response = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $response = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", [
+            'payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $response->assertStatus(409)->assertJsonPath('code', 'CHECKOUT_FAILED');
         $this->assertSame(Sale::STATUS_DRAFT, Sale::find($saleId)->status);
@@ -83,7 +84,7 @@ class PosCheckoutTest extends TestCase
         ])->json('data.id');
 
         $response = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", [
-            'payment_method' => 'CASH',
+            'payment_method' => 'CASH', 'paid_amount' => 50000,
             'grand_total' => 1,
             'unit_price' => 1,
         ]);
@@ -100,8 +101,8 @@ class PosCheckoutTest extends TestCase
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
 
-        $first = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
-        $second = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $first = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 10000]);
+        $second = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 10000]);
 
         $first->assertStatus(200);
         $second->assertStatus(409);
@@ -132,7 +133,7 @@ class PosCheckoutTest extends TestCase
         $saleId = $this->actingAs($cashier)->postJson('/api/v1/sales', [
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $edit = $this->actingAs($cashier)->putJson("/api/v1/sales/{$saleId}", [
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 99]],
@@ -182,7 +183,7 @@ class PosCheckoutTest extends TestCase
         ])->json('data.id');
 
         $response = $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", [
-            'payment_method' => 'CASH',
+            'payment_method' => 'CASH', 'paid_amount' => 50000,
         ]);
 
         $response->assertStatus(200)
@@ -213,7 +214,7 @@ class PosCheckoutTest extends TestCase
             'service_order_id' => $orderId,
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$firstSaleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$firstSaleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $response = $this->actingAs($cashier)->postJson('/api/v1/sales', [
             'service_order_id' => $orderId,

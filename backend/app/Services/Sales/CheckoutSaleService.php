@@ -40,6 +40,17 @@ class CheckoutSaleService
             throw new RuntimeException('Discount cannot be negative.', 422);
         }
 
+        // CASH validation: paid_amount must be >= grand_total and > 0
+        $isCash = $paymentMethod === Sale::PAYMENT_CASH;
+        if ($isCash) {
+            if ($paidAmount === null || $paidAmount <= 0) {
+                throw new RuntimeException('Jumlah bayar tunai harus lebih dari 0.', 422);
+            }
+            if (bccomp((string) $paidAmount, (string) $sale->grand_total, 2) < 0) {
+                throw new RuntimeException('Jumlah bayar tunai tidak boleh kurang dari total tagihan.', 422);
+            }
+        }
+
         return DB::transaction(function () use ($sale, $paymentMethod, $paidAmount, $discountAmount, $customerId, $serviceOrderId, $isService, $complaint, $diagnosisNote, $motorcycleType) {
             // Lock the sale header row and re-verify status inside the lock so two
             // concurrent checkout requests for the same sale cannot both proceed

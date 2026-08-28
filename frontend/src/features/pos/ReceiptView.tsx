@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
-import { PrinterIcon } from "@/components/shared/icons";
+import { PrinterIcon, ChevronLeftIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
 import { PAYMENT_LABEL, BENGKEL_CONFIG } from "@/lib/constants";
 import type { Sale } from "@/types";
+import "./ReceiptView.css";
 
 export function ReceiptView({
   sale,
@@ -145,7 +146,7 @@ export function ReceiptView({
   };
 
   return (
-    <div className="thermal-scroll">
+    <div className="thermal-print-layout">
       <div className="thermal-receipt">
         <div className="text-center mb-4">
           <p
@@ -163,18 +164,9 @@ export function ReceiptView({
         <p className="section-title">BUKTI TRANSAKSI</p>
         <div className="section-divider"></div>
 
-        <div className="kv-row">
-          <span className="kv-label">No. Transaksi</span>
-          <span className="kv-value">{sale.sale_code}</span>
-        </div>
-        <div className="kv-row">
-          <span className="kv-label">Tanggal</span>
-          <span className="kv-value">{formatDateTime(sale.paid_at)}</span>
-        </div>
-        <div className="kv-row">
-          <span className="kv-label">Kasir</span>
-          <span className="kv-value">{sale.cashier?.name || "-"}</span>
-        </div>
+        <div className="kv-row"><span className="kv-label">No. Transaksi</span><span className="kv-value">{sale.sale_code}</span></div>
+        <div className="kv-row"><span className="kv-label">Tanggal</span><span className="kv-value">{formatDateTime(sale.paid_at)}</span></div>
+        <div className="kv-row"><span className="kv-label">Kasir</span><span className="kv-value">{sale.cashier?.name || "-"}</span></div>
 
         <div className="section-divider"></div>
 
@@ -182,10 +174,7 @@ export function ReceiptView({
           <>
             <p className="section-title">PELANGGAN</p>
             <div className="section-divider"></div>
-            <div className="kv-row">
-              <span className="kv-label">Nama</span>
-              <span className="kv-value">{customerName}</span>
-            </div>
+            <div className="kv-row"><span className="kv-label">Nama</span><span className="kv-value">{customerName}</span></div>
             <div className="section-divider"></div>
           </>
         )}
@@ -233,12 +222,12 @@ export function ReceiptView({
         </p>
       </div>
 
-      <div className="no-print mt-4 flex flex-col md:flex-row md:flex-wrap gap-2 justify-center">
-        <Button variant="secondary" onClick={handlePrint} className="md:flex-1">
+      <div className="no-print flex flex-col md:flex-row md:flex-wrap gap-2 justify-center">
+        <Button variant="primary" onClick={handlePrint} className="md:flex-1">
           <PrinterIcon className="h-4 w-4" /> Cetak Nota
         </Button>
         <Button variant="secondary" onClick={onClose} className="md:flex-1">
-          Transaksi Baru
+          <ChevronLeftIcon className="h-4 w-4" /> Kembali
         </Button>
       </div>
     </div>

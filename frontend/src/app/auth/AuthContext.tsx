@@ -2,11 +2,10 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Role, User } from "@/types";
 import { loginApi, logoutApi, meApi } from "@/lib/api/auth";
 import type { ApiError } from "@/types";
@@ -23,43 +22,52 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+export const AUTH_QUERY_KEY = ["auth", "me"] as const;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // On mount, try to fetch the authenticated user (restore session).
-  const refreshUser = useCallback(async () => {
-    try {
-      const u = await meApi();
-      setUser(u);
-    } catch {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Fetch authenticated user with React Query
+  const { data: user = null, isLoading } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: meApi,
+    retry: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: loginApi,
+    onSuccess: (userData) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, userData);
+    },
+  });
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: logoutApi,
+    onSuccess: () => {
+      sessionStorage.removeItem("stockDismissSession");
+      queryClient.setQueryData(AUTH_QUERY_KEY, null);
+      queryClient.clear(); // Clear all cache on logout
+    },
+  });
 
   const login = useCallback(
     async (email: string, password: string, remember?: boolean) => {
-      const u = await loginApi({ email, password, remember });
-      setUser(u);
+      const u = await loginMutation.mutateAsync({ email, password, remember });
       return u;
     },
-    [],
+    [loginMutation],
   );
 
   const logout = useCallback(async () => {
-    try {
-      await logoutApi();
-    } finally {
-      sessionStorage.removeItem("stockDismissSession");
-      setUser(null);
-    }
-  }, []);
+    await logoutMutation.mutateAsync();
+  }, [logoutMutation]);
+
+  const refreshUser = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+  }, [queryClient]);
 
   const hasRole = useCallback(
     (...roles: Role[]) => (user ? roles.includes(user.role) : false),

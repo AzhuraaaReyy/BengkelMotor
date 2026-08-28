@@ -207,14 +207,11 @@ Input Atur Stok adalah **delta/jumlah perubahan bertanda**, bukan nilai stok abs
 - `stock_after = stock_before + change`.
 - Semua jumlah stok adalah bilangan bulat (`INTEGER`); pecahan ditolak.
 - `change = 0` ditolak; hasil `stock_after < 0` ditolak; note wajib.
-- `PURCHASE` (restock berbayar) → `change > 0`; otomatis membuat `Expense` di **transaksi DB yang sama** dengan perubahan stok:
-  - `amount = change × products.purchase_price`, kategori `Pembelian Stok`,
-  - terhubung via `expenses.stock_movement_id`, `source = 'STOCK_PURCHASE'`,
-  - `expense_date` = hari ini, `created_by` = pengguna yang melakukan restock.
-  - Jika `purchase_price = 0`, expense tidak dibuat.
-- `ADJUSTMENT` (opname/selisih/koreksi, bertanda +/-) dan `OPENING` → **tidak pernah** membuat expense.
-- Transaksi: lock baris produk → update stok → simpan `StockMovement` → (jika PURCHASE) buat `Expense` → commit. Gagal di langkah mana pun → rollback semuanya.
-- Expense `STOCK_PURCHASE` **tidak dapat diedit manual** (koreksi lewat Atur Stok baru). Data tidak pernah dicatat dua kali.
+- `PURCHASE` (stok masuk/restock) → `change > 0`; hanya mencatat perubahan stok.
+- `ADJUSTMENT` (opname/selisih/koreksi, bertanda +/-) dan `OPENING` juga hanya mencatat perubahan stok.
+- Transaksi: lock baris produk → update stok → simpan `StockMovement` → commit. Gagal di langkah mana pun → rollback semuanya.
+- Atur Stok **tidak pernah** membuat `Expense` otomatis. Pengeluaran hanya dicatat manual oleh Admin melalui Manajemen Pengeluaran.
+- Expense legacy `STOCK_PURCHASE` yang sudah ada tetap menjadi histori dan tetap tidak dapat diedit manual.
 
 ---
 
@@ -244,7 +241,7 @@ Input Atur Stok adalah **delta/jumlah perubahan bertanda**, bukan nilai stok abs
 
 Jika implementasi permission berbeda dari tabel ini, dokumen harus diperbarui terlebih dahulu.
 
-> **Kecuali harga beli untuk konteks Atur Stok:** Kasir dapat melihat `purchase_price` **hanya** di halaman Produk & Stok (preview total pengeluaran restock) karena daftar produk dikirim dengan `?include_cost=1`. POS/catalog tidak mengirim flag ini, sehingga harga beli tetap tersembunyi di alur penjualan (security.md A9).
+> **Kecuali harga beli untuk konteks Atur Stok:** Kasir dapat melihat `purchase_price` **hanya** di halaman Produk & Stok karena daftar produk dikirim dengan `?include_cost=1`. POS/catalog tidak mengirim flag ini, sehingga harga beli tetap tersembunyi di alur penjualan (security.md A9).
 
 ---
 
@@ -298,8 +295,9 @@ Minimum tests yang tidak boleh hilang:
 - paid sale snapshot stays unchanged after master update,
 - report totals match paid sales,
 - cashier cannot access purchase price/admin endpoints,
-- paid restock creates a linked locked expense (and rollback stays atomic),
-- adjustment/opname never touches expenses.
+- restock records stock movement without creating expense,
+- adjustment/opname never touches expenses,
+- legacy `STOCK_PURCHASE` expenses remain locked from manual edit.
 
 Bug yang menyangkut uang, stok, role, atau audit wajib memiliki regression test saat diperbaiki.
 

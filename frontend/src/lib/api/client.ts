@@ -28,7 +28,12 @@ const GET_CACHE_TTL_MS = 15_000;
 const getCache = new Map<string, { expiresAt: number; data: unknown; headers: unknown }>();
 
 function getCacheKey(config: AxiosRequestConfig): string {
-  return `${(config.method ?? "get").toUpperCase()} ${config.url ?? ""}`;
+  const method = (config.method ?? "get").toUpperCase();
+  const url = config.url ?? "";
+  const params = config.params
+    ? "?" + new URLSearchParams(config.params as Record<string, string>).toString()
+    : "";
+  return `${method} ${url}${params}`;
 }
 
 client.interceptors.request.use((config) => {

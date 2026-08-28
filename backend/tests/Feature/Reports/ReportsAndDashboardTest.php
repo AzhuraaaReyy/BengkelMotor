@@ -38,7 +38,7 @@ class ReportsAndDashboardTest extends TestCase
         $saleId = $this->actingAs($cashier)->postJson('/api/v1/sales', [
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         // Both endpoints default to the current month (start of month -> now)
         // when no from/to is given, so month_revenue and the report's period
@@ -63,7 +63,7 @@ class ReportsAndDashboardTest extends TestCase
         $saleId = $this->actingAs($cashier)->postJson('/api/v1/sales', [
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $response = $this->actingAs($admin)->getJson('/api/v1/dashboard');
         $response->assertStatus(200);
@@ -111,7 +111,7 @@ class ReportsAndDashboardTest extends TestCase
         $saleId = $this->actingAs($cashier)->postJson('/api/v1/sales', [
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $salesReport = $this->actingAs($admin)->getJson('/api/v1/reports/sales');
         $salesReport->assertStatus(200);

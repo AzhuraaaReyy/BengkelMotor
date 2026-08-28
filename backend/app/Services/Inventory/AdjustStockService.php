@@ -3,7 +3,6 @@
 namespace App\Services\Inventory;
 
 use App\Models\AuditLog;
-use App\Models\Expense;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\Audit\AuditService;
@@ -23,14 +22,13 @@ class AdjustStockService
      * "kasir kelola stok"). Input is the signed quantity CHANGE (delta):
      *   stock_after = stock_before + $change.
      *
-     * Type semantics (Fase 3.3):
-     *   - PURCHASE  : paid restock, $change must be > 0. Creates an Expense
-     *                 (amount = $change × product.purchase_price) in the same
-     *                 DB transaction, linked via stock_movements.id. No expense
-     *                 is created when purchase_price is 0.
-     *   - ADJUSTMENT: non-purchase correction (opname/loss/correction), signed
-     *                 delta, NEVER touches expenses.
-     *   - OPENING   : initial stock, no expense.
+     * Type semantics:
+     *   - PURCHASE  : stock-in/restock, $change must be > 0.
+     *   - ADJUSTMENT: correction (opname/loss/correction), signed delta.
+     *   - OPENING   : initial stock.
+     *
+     * Stock adjustment records stock movement only. Expenses are managed
+     * manually by Admin through Expense Management.
      */
     public function adjust(Product $product, int|float $change, string $type, string $note): Product
     {
@@ -68,7 +66,7 @@ class AdjustStockService
             $product->current_stock = $after;
             $product->save();
 
-            $movement = StockMovement::create([
+            StockMovement::create([
                 'product_id' => $product->id,
                 'type' => $type,
                 'quantity_change' => $change,
@@ -89,10 +87,6 @@ class AdjustStockService
                 $user->id
             );
 
-            if ($type === StockMovement::TYPE_PURCHASE && $product->purchase_price > 0) {
-                $this->createPurchaseExpense($product, $movement, $change, $note, $user);
-            }
-
             $product = $product->refresh();
             $this->checkStockNotification($product, (int) $product->current_stock);
 
@@ -105,50 +99,4 @@ class AdjustStockService
         $this->stockNotification->check($product, $currentStock);
     }
 
-    private function createPurchaseExpense(
-        Product $product,
-        StockMovement $movement,
-        int $change,
-        string $note,
-        $user
-    ): void {
-        $unitPrice = $product->purchase_price;
-        $total = bcmul((string) $change, (string) $unitPrice, 2);
-
-        $expense = Expense::create([
-            'expense_date' => now()->toDateString(),
-            'category' => 'Pembelian Stok',
-            'amount' => $total,
-            'description' => sprintf(
-                'Pembelian stok: %s — %d %s × %s = %s%s',
-                $product->name,
-                $change,
-                $product->unit,
-                $this->rupiah($unitPrice),
-                $this->rupiah($total),
-                $note !== '' ? " ({$note})" : ''
-            ),
-            'created_by' => $user->id,
-            'source' => 'STOCK_PURCHASE',
-            'stock_movement_id' => $movement->id,
-            'item_name' => $product->name,
-            'quantity' => $change,
-            'unit_price' => $unitPrice,
-        ]);
-
-        $this->audit->log(
-            AuditLog::ACTION_EXPENSE_CREATED,
-            'expense',
-            $expense->id,
-            null,
-            ['category' => $expense->category, 'amount' => $expense->amount, 'expense_date' => $expense->expense_date, 'source' => 'STOCK_PURCHASE'],
-            'Otomatis dari restock ' . $movement->type,
-            $user->id
-        );
-    }
-
-    private function rupiah(float|string $value): string
-    {
-        return 'Rp' . number_format((float) $value, 0, ',', '.');
-    }
 }

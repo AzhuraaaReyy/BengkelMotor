@@ -15,7 +15,12 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SaleStatusBadge } from "@/components/ui/badges";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/app/auth/AuthContext";
-import { getSalesApi, getSaleApi, voidSaleApi, expireSaleApi } from "@/lib/api/sales";
+import {
+  getSalesApi,
+  getSaleApi,
+  voidSaleApi,
+  expireSaleApi,
+} from "@/lib/api/sales";
 import { formatRupiah, formatDateTime, formatNumber } from "@/lib/formatters";
 import { SALE_STATUS_LABEL, PAYMENT_LABEL } from "@/lib/constants";
 import type { Sale } from "@/types";
@@ -67,9 +72,10 @@ export function SalesHistoryPage() {
     }
   }, [search, status, page]);
 
+  // Perbaikan: tambahkan `page` dan `load` pada dependency array
   useEffect(() => {
     load();
-  }, [load]);
+  }, [load, page]);
 
   const openDetail = async (sale: Sale) => {
     setDetail(sale);
@@ -124,8 +130,13 @@ export function SalesHistoryPage() {
     if (!expireTarget) return;
     setExpireLoading(true);
     try {
-      await expireSaleApi(expireTarget.id, expireReason.trim() || "Dikedaluwaskan manual oleh admin.");
-      toast.success(`Transaksi ${expireTarget.sale_code} berhasil dikedaluwaskan.`);
+      await expireSaleApi(
+        expireTarget.id,
+        expireReason.trim() || "Dikedaluwaskan manual oleh admin.",
+      );
+      toast.success(
+        `Transaksi ${expireTarget.sale_code} berhasil dikedaluwaskan.`,
+      );
       setExpireTarget(null);
       setDetail(null);
       load();
@@ -164,7 +175,11 @@ export function SalesHistoryPage() {
             Detail
           </Button>
           {r.status === "PENDING" && (
-            <Button variant="primary" size="sm" onClick={() => navigate(`/pos?resume_payment=${r.id}`)}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate(`/pos?resume_payment=${r.id}`)}
+            >
               Lanjutkan Pembayaran
             </Button>
           )}
@@ -206,10 +221,12 @@ export function SalesHistoryPage() {
               }}
               options={[
                 { value: "", label: "Semua Status" },
-                ...(["PENDING", "PAID", "EXPIRED", "VOID"] as const).map((s) => ({
-                  value: s,
-                  label: SALE_STATUS_LABEL[s],
-                })),
+                ...(["PENDING", "PAID", "EXPIRED", "VOID"] as const).map(
+                  (s) => ({
+                    value: s,
+                    label: SALE_STATUS_LABEL[s],
+                  }),
+                ),
               ]}
             />
           </div>
@@ -255,21 +272,37 @@ export function SalesHistoryPage() {
                 </div>
                 <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
                   <div className="flex shrink-0 gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(s)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openDetail(s)}
+                    >
                       Detail
                     </Button>
                     {s.status === "PENDING" && (
-                      <Button variant="primary" size="sm" onClick={() => navigate(`/pos?resume_payment=${s.id}`)}>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/pos?resume_payment=${s.id}`)}
+                      >
                         Lanjutkan
                       </Button>
                     )}
                     {s.status === "PAID" && (
-                      <Button variant="ghost" size="sm" onClick={() => openReceipt(s)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openReceipt(s)}
+                      >
                         Cetak
                       </Button>
                     )}
                     {isAdmin && s.status === "PAID" && (
-                      <Button variant="danger" size="sm" onClick={() => openVoid(s)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => openVoid(s)}
+                      >
                         Void
                       </Button>
                     )}
@@ -338,7 +371,8 @@ export function SalesHistoryPage() {
 
             {detail.status === "PENDING" && (
               <div className="rounded-control bg-warning-subtle px-3 py-2 text-sm text-warning">
-                Pembayaran masih menunggu. Silakan lanjutkan pembayaran atau tunggu hingga kedaluwarsa.
+                Pembayaran masih menunggu. Silakan lanjutkan pembayaran atau
+                tunggu hingga kedaluwarsa.
               </div>
             )}
 
@@ -350,7 +384,10 @@ export function SalesHistoryPage() {
 
             {detail.status === "PENDING" && (
               <div className="flex justify-end">
-                <Button variant="primary" onClick={() => navigate(`/pos?resume_payment=${detail.id}`)}>
+                <Button
+                  variant="primary"
+                  onClick={() => navigate(`/pos?resume_payment=${detail.id}`)}
+                >
                   Lanjutkan Pembayaran
                 </Button>
               </div>

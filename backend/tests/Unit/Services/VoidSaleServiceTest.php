@@ -30,7 +30,7 @@ class VoidSaleServiceTest extends TestCase
             'subtotal' => 0,
         ]);
 
-        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         return [$paid, $product];
     }

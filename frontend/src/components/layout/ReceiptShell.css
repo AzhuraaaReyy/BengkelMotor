@@ -1,0 +1,92 @@
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .receipt-container {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    width: 80mm !important;
+  }
+  body {
+    background: white !important;
+  }
+}
+
+.receipt-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.receipt-container {
+  width: 100%;
+  max-width: 80mm;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.receipt-content {
+  padding: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px dashed #e5e7eb;
+  background: #fafafa;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #7c3aed;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #6d28d9;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+@media (max-width: 480px) {
+  .receipt-page {
+    padding: 12px;
+  }
+  .receipt-container {
+    border-radius: 0;
+    max-width: none;
+  }
+}

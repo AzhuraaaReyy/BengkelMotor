@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useMemo, ReactNode } from "react";
-import type { Product, Service, PaymentMethod } from "@/types";
+import type { Product, Service } from "@/types";
 
 export interface CartLine {
   item_type: "PRODUCT" | "SERVICE";

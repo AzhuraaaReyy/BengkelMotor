@@ -22,10 +22,12 @@ import {
   updateProductApi,
   adjustStockApi,
   getProductMovementsApi,
+  type ProductPayload,
 } from "@/lib/api/products";
 import { formatRupiah, formatQuantity, formatDateTime } from "@/lib/formatters";
 import { STOCK_MOVEMENT_LABEL } from "@/lib/constants";
 import { PlusIcon, EditIcon } from "@/components/shared/icons";
+import { resizeImage } from "@/lib/imageUtils";
 import type { Product, StockMovement } from "@/types";
 
 interface FormState {
@@ -144,7 +146,7 @@ export function ProductsPage() {
     setSaving(true);
     try {
       if (form.id) {
-        await updateProductApi(form.id, {
+        const payload: Partial<ProductPayload> = {
           sku: form.sku,
           name: form.name,
           category: form.category || undefined,
@@ -154,8 +156,12 @@ export function ProductsPage() {
           sale_price: Number(form.sale_price),
           min_stock: Number(form.min_stock),
           is_active: form.is_active,
-          image: form.image,
-        });
+        };
+        // Only include image if user uploaded a new one
+        if (form.image) {
+          payload.image = form.image;
+        }
+        await updateProductApi(form.id, payload);
         toast.success("Produk diperbarui.");
       } else {
         await createProductApi({
@@ -176,8 +182,17 @@ export function ProductsPage() {
       load();
       refreshNotifications();
     } catch (e) {
-      const err = e as { message?: string };
-      setError(err.message || "Gagal menyimpan.");
+      const err = e as { message?: string; errors?: Record<string, string[]> };
+      
+      // Show specific validation errors if available
+      if (err.errors) {
+        const errorMessages = Object.entries(err.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('; ');
+        toast.error(errorMessages || err.message || "Gagal menyimpan produk.");
+      } else {
+        toast.error(err.message || "Gagal menyimpan produk.");
+      }
     } finally {
       setSaving(false);
     }
@@ -522,17 +537,34 @@ export function ProductsPage() {
               { value: "false", label: "Nonaktif" },
             ]}
           />
-          <Input
-            label="Foto Produk"
-            name="image"
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0] || null;
-              const preview = file ? URL.createObjectURL(file) : null;
-              setForm({ ...form, image: file, imagePreview: preview });
-            }}
-          />
+          <div>
+            <Input
+              label="Foto Produk"
+              name="image"
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0] || null;
+                if (!file) {
+                  setForm({ ...form, image: null, imagePreview: null });
+                  return;
+                }
+
+                try {
+                  // Resize image to max 1024x1024px
+                  const resizedFile = await resizeImage(file, 1024, 1024);
+                  const preview = URL.createObjectURL(resizedFile);
+                  setForm({ ...form, image: resizedFile, imagePreview: preview });
+                } catch {
+                  toast.error('Gagal memproses gambar. Silakan coba lagi.');
+                  setForm({ ...form, image: null, imagePreview: null });
+                }
+              }}
+            />
+            <p className="mt-1 text-xs text-text-secondary">
+              Gambar akan otomatis diresize ke maksimal 1024x1024px. Ukuran file maks. 5MB.
+            </p>
+          </div>
           {form.imagePreview && (
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-text-secondary mb-1">

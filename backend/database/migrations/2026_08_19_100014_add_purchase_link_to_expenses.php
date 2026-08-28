@@ -5,13 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Fase 3.3 — Stok delta + integrasi pengeluaran restock (Rules.md §9 / PRD §8).
- * Expenses can now be auto-created from a paid PURCHASE stock movement:
- *   - stock_movement_id: reference to the stock_movements row that produced it
- *     (never recorded twice; corrections go through new stock movements).
- *   - source: null = MANUAL (entered by user), 'STOCK_PURCHASE' = auto from restock.
- *   - item_name/quantity/unit_price/payment_method: structured purchase details.
- * All new columns are nullable so existing manual expenses are unaffected.
+ * Legacy restock expense linkage. New stock adjustments no longer create
+ * expenses automatically; these nullable columns remain for historical
+ * STOCK_PURCHASE expense rows and manual expense compatibility.
  */
 return new class extends Migration
 {

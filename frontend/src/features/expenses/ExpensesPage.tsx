@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -12,71 +12,46 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { useToast } from "@/components/ui/Toast";
-import {
-  getExpensesApi,
-  createExpenseApi,
-  updateExpenseApi,
-} from "@/lib/api/expenses";
+import { useExpenses } from "@/lib/useExpenses";
 import { formatRupiah, formatDate } from "@/lib/formatters";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import { PlusIcon, EditIcon } from "@/components/shared/icons";
 import type { Expense } from "@/types";
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-function startOfMonth(): string {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-}
-
 export function ExpensesPage() {
   const toast = useToast();
-  const [data, setData] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [from, setFrom] = useState(startOfMonth());
-  const [to, setTo] = useState(today());
+  const [from, setFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const {
+    expenses: data,
+    lastPage,
+    total,
+    isLoading: loading,
+    error: loadError,
+    createExpense,
+    updateExpense,
+  } = useExpenses({
+    from,
+    to,
+    page,
+    per_page: 10,
+  });
+
+  const error = loadError ? (loadError as { message?: string }).message || "Gagal memuat pengeluaran." : null;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
-  const [fDate, setFDate] = useState(today());
+  const [fDate, setFDate] = useState(new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getExpensesApi({
-        from,
-        to,
-        page,
-        per_page: 10,
-      });
-      setData(res.data);
-      setLastPage(res.last_page);
-      setTotal(res.total);
-    } catch (e) {
-      const err = e as { message?: string };
-      setError(err.message || "Gagal memuat pengeluaran.");
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to, page]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
   const openCreate = () => {
     setEditing(null);
-    setFDate(today());
+    setFDate(new Date().toISOString().slice(0, 10));
     setCategory(EXPENSE_CATEGORIES[0]);
     setAmount("");
     setDescription("");
@@ -101,15 +76,18 @@ export function ExpensesPage() {
     setSaving(true);
     try {
       if (editing) {
-        await updateExpenseApi(editing.id, {
-          expense_date: fDate,
-          category,
-          amount: amt,
-          description: description || undefined,
+        await updateExpense({
+          id: editing.id,
+          payload: {
+            expense_date: fDate,
+            category,
+            amount: amt,
+            description: description || undefined,
+          },
         });
         toast.success("Pengeluaran diperbarui.");
       } else {
-        await createExpenseApi({
+        await createExpense({
           expense_date: fDate,
           category,
           amount: amt,
@@ -118,10 +96,17 @@ export function ExpensesPage() {
         toast.success("Pengeluaran dicatat.");
       }
       setFormOpen(false);
-      load();
     } catch (e) {
-      const err = e as { message?: string };
-      toast.error(err.message || "Gagal menyimpan.");
+      const err = e as { message?: string; errors?: Record<string, string[]> };
+
+      if (err.errors) {
+        const errorMessages = Object.entries(err.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('; ');
+        toast.error(errorMessages || err.message || "Gagal menyimpan.");
+      } else {
+        toast.error(err.message || "Gagal menyimpan.");
+      }
     } finally {
       setSaving(false);
     }
@@ -208,7 +193,7 @@ export function ExpensesPage() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={load} />
+        <ErrorState message={error} />
       ) : (
         <>
           <DataTable columns={columns} data={data} keyExtractor={(r) => r.id} />

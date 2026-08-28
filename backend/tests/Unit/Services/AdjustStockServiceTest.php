@@ -7,7 +7,6 @@ use App\Models\Expense;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\Inventory\AdjustStockService;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -50,10 +49,9 @@ class AdjustStockServiceTest extends TestCase
         $this->assertEquals(10, (float) $movement->quantity_change);
     }
 
-    public function test_purchase_creates_linked_expense(): void
+    public function test_purchase_records_stock_movement_without_expense(): void
     {
-        $admin = $this->admin();
-        $this->actingAs($admin);
+        $this->actingAs($this->admin());
         $product = Product::factory()->create([
             'current_stock' => 3,
             'purchase_price' => 15000,
@@ -64,31 +62,26 @@ class AdjustStockServiceTest extends TestCase
         $this->assertEquals(10, (float) $updated->current_stock);
 
         $movement = StockMovement::where('product_id', $product->id)->first();
-        $expense = Expense::where('stock_movement_id', $movement->id)->first();
-
-        $this->assertNotNull($expense, 'PURCHASE must auto-create an expense.');
-        $this->assertSame('STOCK_PURCHASE', $expense->source);
-        $this->assertSame('Pembelian Stok', $expense->category);
-        $this->assertEquals('105000.00', $expense->amount); // 7 × 15000
-        $this->assertSame($product->name, $expense->item_name);
-        $this->assertEquals(7, (int) $expense->quantity);
-        $this->assertEquals('15000.00', $expense->unit_price);
-        $this->assertEquals(now()->toDateString(), $expense->expense_date->toDateString());
-        $this->assertEquals($admin->id, $expense->created_by);
-
-        $this->assertTrue(
+        $this->assertNotNull($movement);
+        $this->assertSame(StockMovement::TYPE_PURCHASE, $movement->type);
+        $this->assertEquals(7, (float) $movement->quantity_change);
+        $this->assertSame(0, Expense::count());
+        $this->assertFalse(
             AuditLog::where('action', AuditLog::ACTION_EXPENSE_CREATED)->where('entity_type', 'expense')->exists()
         );
     }
 
-    public function test_purchase_with_zero_price_creates_no_expense(): void
+    public function test_purchase_never_creates_expense_regardless_of_purchase_price(): void
     {
         $this->actingAs($this->admin());
-        $product = Product::factory()->create(['current_stock' => 0, 'purchase_price' => 0]);
+        $freeProduct = Product::factory()->create(['current_stock' => 0, 'purchase_price' => 0]);
+        $pricedProduct = Product::factory()->create(['current_stock' => 0, 'purchase_price' => 25000]);
 
-        app(AdjustStockService::class)->adjust($product, 5, StockMovement::TYPE_PURCHASE, 'Beli gratis');
+        app(AdjustStockService::class)->adjust($freeProduct, 5, StockMovement::TYPE_PURCHASE, 'Stok masuk');
+        app(AdjustStockService::class)->adjust($pricedProduct, 2, StockMovement::TYPE_PURCHASE, 'Stok masuk');
 
-        $this->assertEquals(5, (float) $product->fresh()->current_stock);
+        $this->assertEquals(5, (float) $freeProduct->fresh()->current_stock);
+        $this->assertEquals(2, (float) $pricedProduct->fresh()->current_stock);
         $this->assertSame(0, Expense::count());
     }
 
@@ -106,25 +99,6 @@ class AdjustStockServiceTest extends TestCase
         $this->assertSame(0, Expense::count());
     }
 
-    public function test_stock_and_expense_are_atomic_when_expense_fails(): void
-    {
-        $this->actingAs($this->admin());
-        $product = Product::factory()->create(['current_stock' => 5, 'purchase_price' => 10000]);
-
-        // Force the expense insert to fail inside the same transaction.
-        Expense::creating(fn () => throw new RuntimeException('DB failure', 500));
-
-        try {
-            app(AdjustStockService::class)->adjust($product, 3, StockMovement::TYPE_PURCHASE, 'Beli');
-            $this->fail('Expected RuntimeException.');
-        } catch (RuntimeException $e) {
-            $this->assertSame('DB failure', $e->getMessage());
-        }
-
-        $this->assertEquals(5, (float) $product->fresh()->current_stock);
-        $this->assertSame(0, StockMovement::where('product_id', $product->id)->count());
-        $this->assertSame(0, Expense::count());
-    }
 
     public function test_negative_stock_is_rejected(): void
     {

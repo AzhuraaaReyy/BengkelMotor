@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -12,24 +12,32 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import {
-  getServicesApi,
-  createServiceApi,
-  updateServiceApi,
-} from "@/lib/api/services";
+import { useServices } from "@/lib/useServices";
 import { formatRupiah } from "@/lib/formatters";
 import { PlusIcon, EditIcon } from "@/components/shared/icons";
 import type { Service } from "@/types";
 
 export function ServicesPage() {
   const toast = useToast();
-  const [data, setData] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 200);
   const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
+
+  const {
+    services: data,
+    lastPage,
+    total,
+    isLoading: loading,
+    error: loadError,
+    createService,
+    updateService,
+  } = useServices({
+    search: debouncedSearch || undefined,
+    page,
+    per_page: 10,
+  });
+
+  const error = loadError ? (loadError as { message?: string }).message || "Gagal memuat jasa." : null;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
@@ -38,29 +46,6 @@ export function ServicesPage() {
   const [price, setPrice] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getServicesApi({
-        search: debouncedSearch || undefined,
-        page,
-        per_page: 10,
-      });
-      setData(res.data);
-      setLastPage(res.last_page);
-    } catch (e) {
-      const err = e as { message?: string };
-      setError(err.message || "Gagal memuat jasa.");
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, page]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const openCreate = () => {
     setEditing(null);
@@ -88,15 +73,18 @@ export function ServicesPage() {
     setSaving(true);
     try {
       if (editing) {
-        await updateServiceApi(editing.id, {
-          code,
-          name,
-          sale_price: Number(price),
-          is_active: isActive,
+        await updateService({
+          id: editing.id,
+          payload: {
+            code,
+            name,
+            sale_price: Number(price),
+            is_active: isActive,
+          },
         });
         toast.success("Jasa diperbarui.");
       } else {
-        await createServiceApi({
+        await createService({
           code,
           name,
           sale_price: Number(price),
@@ -105,10 +93,17 @@ export function ServicesPage() {
         toast.success("Jasa dibuat.");
       }
       setFormOpen(false);
-      load();
     } catch (e) {
-      const err = e as { message?: string };
-      toast.error(err.message || "Gagal menyimpan.");
+      const err = e as { message?: string; errors?: Record<string, string[]> };
+
+      if (err.errors) {
+        const errorMessages = Object.entries(err.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+          .join('; ');
+        toast.error(errorMessages || err.message || "Gagal menyimpan jasa.");
+      } else {
+        toast.error(err.message || "Gagal menyimpan jasa.");
+      }
     } finally {
       setSaving(false);
     }
@@ -183,13 +178,14 @@ export function ServicesPage() {
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={load} />
+        <ErrorState message={error} />
       ) : (
         <>
           <DataTable columns={columns} data={data} keyExtractor={(r) => r.id} />
           <Pagination
             currentPage={page}
             lastPage={lastPage}
+            total={total}
             onPageChange={setPage}
           />
         </>

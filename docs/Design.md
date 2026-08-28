@@ -93,26 +93,25 @@ Login dari mobile
 Produk & Stok
  -> pilih produk
  -> Atur Stok
- -> pilih tipe PURCHASE (restock berbayar) atau ADJUSTMENT (koreksi/opname)
+ -> pilih tipe PURCHASE (stok masuk/restock) atau ADJUSTMENT (koreksi/opname)
  -> isi Jumlah Perubahan (delta bertanda, integer) + catatan wajib
     PURCHASE:
        - input "Jumlah Ditambahkan" (min 1)
-       - pratinjau: stok akhir + total pengeluaran (qty × harga beli)
+       - pratinjau stok akhir; tidak membuat pengeluaran otomatis
     ADJUSTMENT:
        - input "Jumlah Perubahan" (bisa minus = pengurangan)
-       - pratinjau stok akhir; catatan: tidak membuat pengeluaran otomatis
+       - pratinjau stok akhir; tidak membuat pengeluaran otomatis
  -> simpan (1 transaksi DB)
  -> current_stock = stok sebelum + delta
  -> stock movement tercatat (sebelum, jumlah, sesudah, waktu, petugas)
- -> jika PURCHASE: expense "Pembelian Stok" dibuat otomatis & terkunci
 ```
 
 Catatan:
 
 - Input adalah **delta**, bukan nilai stok absolut (contoh: stok 3 + input 7 → 10).
 - Master produk (create/update + Harga Beli) hanya Admin; Kasir dapat melakukan restock/adjust stok.
-- Harga beli untuk pratinjau restock dikirim hanya pada halaman Produk & Stok (`?include_cost=1`), tidak pada POS.
-- Expense otomatis dari restock tampil di halaman Pengeluaran dengan badge **Pembelian Stok**, tanpa tombol Edit (koreksi lewat Atur Stok baru).
+- Harga beli untuk konteks Atur Stok dikirim hanya pada halaman Produk & Stok (`?include_cost=1`), tidak pada POS.
+- Pengeluaran tidak dibuat otomatis dari restock; Admin mencatat pengeluaran manual melalui Manajemen Pengeluaran. Expense legacy **Pembelian Stok** tetap tampil sebagai histori dan tetap terkunci.
 
 ### 3.5 Admin — Void Transaksi
 
@@ -332,11 +331,11 @@ Form minimal:
 
 Nominal diformat sebagai Rupiah pada UI, tetapi dikirim sebagai nilai numerik yang valid ke API.
 
-Pengeluaran **otomatis dari restock** (badge `Pembelian Stok`):
+Pengeluaran legacy **Pembelian Stok**:
 
-- dibuat oleh Atur Stok tipe PURCHASE (`amount = qty × harga beli`), dengan data barang (`item_name`, `quantity`, `unit_price`);
-- **terkunci** — tidak memiliki tombol Edit (backend menolak dengan 403 `EXPENSE_LOCKED`); koreksi dilakukan dengan membuat restock/adjustment baru;
-- langsung masuk ke laporan keuangan periode tanggalnya (tanpa input ulang / double entry).
+- data lama dari restock otomatis tetap tampil sebagai histori;
+- tetap **terkunci** — tidak memiliki tombol Edit (backend menolak dengan 403 `EXPENSE_LOCKED`);
+- restock baru tidak membuat pengeluaran otomatis; Admin mencatat pengeluaran manual bila diperlukan.
 
 ---
 

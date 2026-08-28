@@ -158,7 +158,7 @@ class ProductController extends Controller
             // Stock is whole numbers only (Fase 3).
             'current_stock' => ['nullable', 'integer', 'min:0'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
-            'image' => ['nullable', 'file', 'image', 'max:2048', 'dimensions:max_width=1024,max_height=1024'],
+            'image' => ['nullable', 'file', 'image', 'max:5120', 'dimensions:max_width=1024,max_height=1024'],
         ]);
 
         $imagePath = null;
@@ -223,7 +223,7 @@ class ProductController extends Controller
             // Stock is whole numbers only (Fase 3).
             'min_stock' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
-            'image' => ['nullable', 'file', 'image', 'max:2048', 'dimensions:max_width=1024,max_height=1024'],
+            'image' => ['nullable', 'file', 'image', 'max:5120', 'dimensions:max_width=1024,max_height=1024'],
         ]);
 
         // current_stock cannot be changed via master update (must use adjustment endpoint).

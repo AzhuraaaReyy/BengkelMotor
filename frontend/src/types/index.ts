@@ -259,6 +259,9 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
+  product_id?: number | null;
+  product_image?: string | null;
+  image?: string | null;
   data?: Record<string, unknown>;
   read_at: string | null;
   created_at: string;

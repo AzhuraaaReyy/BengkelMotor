@@ -363,9 +363,9 @@ Prefix contoh: `/api/v1`
 
 - CRUD products, dengan write dibatasi sesuai role.
 - Endpoint stock adjustment (`adjust-stock`) shared Admin & Kasir; hanya master produk (create/update + Harga Beli) yang Admin-only.
-- `POST products/{product}/adjust-stock` menerima **delta bertanda** (`quantity`), bukan nilai absolut; `type` PURCHASE/ADJUSTMENT/OPENING, `note` wajib. `AdjustStockService` mengeksekusi dalam satu transaksi DB: lock produk → update stok → `stock_movements` → jika PURCHASE dengan `purchase_price > 0`, buat `Expense` `STOCK_PURCHASE` (amount = quantity × purchase_price, link `stock_movements.id`). Rollback total jika gagal. ADJUSTMENT/OPENING tidak menyentuh expense.
-- `GET products?include_cost=1` mengekspos `purchase_price` untuk non-admin **hanya** pada halaman Produk & Stok (preview restock). POS/catalog tidak mengirim flag, jadi tetap tanpa harga beli.
-- `GET products/{product}/movements` (shared) mengembalikan riwayat stok yang sudah di-enrich: `direction` (IN/OUT), `created_by_name` (petugas), `sale_code` (referensi transaksi bila ada), `expense_amount` (untuk baris PURCHASE yang menghasilkan expense).
+- `POST products/{product}/adjust-stock` menerima **delta bertanda** (`quantity`), bukan nilai absolut; `type` PURCHASE/ADJUSTMENT/OPENING, `note` wajib. `AdjustStockService` mengeksekusi dalam satu transaksi DB: lock produk → update stok → `stock_movements` → commit. Atur Stok tidak membuat `Expense`; pengeluaran hanya dicatat manual oleh Admin melalui Manajemen Pengeluaran.
+- `GET products?include_cost=1` mengekspos `purchase_price` untuk non-admin **hanya** pada halaman Produk & Stok. POS/catalog tidak mengirim flag, jadi tetap tanpa harga beli.
+- `GET products/{product}/movements` (shared) mengembalikan riwayat stok yang sudah di-enrich: `direction` (IN/OUT), `created_by_name` (petugas), `sale_code` (referensi transaksi bila ada), `expense_amount` (nullable untuk histori legacy).
 - `GET products/low-stock` (shared, dideklarasikan sebelum `products/{product}`) — daftar produk aktif dengan `current_stock < 5` (threshold notifikasi) + counts; tanpa field sensitif.
 - `ExpenseController::update` menolak (403 `EXPENSE_LOCKED`) expense `source = 'STOCK_PURCHASE'`.
 

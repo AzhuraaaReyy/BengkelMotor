@@ -19,7 +19,7 @@ class VoidSaleTest extends TestCase
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => $qty]],
         ])->json('data.id');
 
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         return [$saleId, $product];
     }

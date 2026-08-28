@@ -76,7 +76,7 @@ class CheckoutSaleServiceTest extends TestCase
         // Master price changes after the item was added to the DRAFT sale.
         $product->update(['sale_price' => 99000]);
 
-        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         $this->assertEquals(99000, (float) $paid->grand_total);
     }
@@ -98,7 +98,7 @@ class CheckoutSaleServiceTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         try {
-            app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+            app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
         } finally {
             $sale->refresh();
             $product->refresh();
@@ -123,7 +123,7 @@ class CheckoutSaleServiceTest extends TestCase
         ]);
 
         $this->expectException(RuntimeException::class);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 999999);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 999999);
     }
 
     public function test_checkout_rejects_negative_discount(): void
@@ -131,7 +131,7 @@ class CheckoutSaleServiceTest extends TestCase
         $sale = $this->draftSale();
 
         $this->expectException(RuntimeException::class);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, -1);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, -1);
     }
 
     public function test_checkout_rejects_inactive_product(): void
@@ -149,7 +149,7 @@ class CheckoutSaleServiceTest extends TestCase
         ]);
 
         $this->expectException(RuntimeException::class);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
     }
 
     public function test_checkout_rejects_inactive_service(): void
@@ -167,7 +167,7 @@ class CheckoutSaleServiceTest extends TestCase
         ]);
 
         $this->expectException(RuntimeException::class);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
     }
 
     public function test_checkout_rejects_already_paid_sale(): void
@@ -183,10 +183,10 @@ class CheckoutSaleServiceTest extends TestCase
             'subtotal' => 0,
         ]);
 
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         $this->expectException(RuntimeException::class);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
     }
 
     public function test_checkout_rejects_a_sale_with_no_items(): void
@@ -215,7 +215,7 @@ class CheckoutSaleServiceTest extends TestCase
             'subtotal' => 0,
         ]);
 
-        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         $this->assertEquals(50000, (float) $paid->grand_total);
         $this->assertSame(0, StockMovement::count());
@@ -238,7 +238,7 @@ class CheckoutSaleServiceTest extends TestCase
 
         $otherCashier = $this->cashier();
 
-        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         $this->assertSame($cashier->id, $paid->cashier_id);
         $this->assertNotSame($otherCashier->id, $paid->cashier_id);

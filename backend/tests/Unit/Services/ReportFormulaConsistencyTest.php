@@ -31,7 +31,7 @@ class ReportFormulaConsistencyTest extends TestCase
             'unit_price' => 0,
             'subtotal' => 0,
         ]);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         Expense::factory()->create(['amount' => 10000, 'expense_date' => now()->toDateString(), 'created_by' => $admin->id]);
 
@@ -66,7 +66,7 @@ class ReportFormulaConsistencyTest extends TestCase
             'unit_price' => 0,
             'subtotal' => 0,
         ]);
-        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        $paid = app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         $this->actingAs($admin);
         app(VoidSaleService::class)->void($paid, 'Batal');
@@ -94,7 +94,7 @@ class ReportFormulaConsistencyTest extends TestCase
             'unit_price' => 0,
             'subtotal' => 0,
         ]);
-        app(CheckoutSaleService::class)->checkout($sale, 'CASH', null, 0);
+        app(CheckoutSaleService::class)->checkout($sale, 'CASH', 100000, 0);
 
         // Master purchase price changes after the sale is PAID.
         $product->update(['purchase_price' => 90000]);

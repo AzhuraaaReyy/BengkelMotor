@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Modal } from "@/components/ui/Modal";
-import { ReceiptView } from "@/features/pos/ReceiptView";
 import { PaymentMethodSelector } from "@/features/pos/PaymentMethodSelector";
 import { WaitingPaymentModal } from "@/features/pos/WaitingPaymentModal";
 import { useToast } from "@/components/ui/Toast";
@@ -29,6 +28,7 @@ export function PosPage() {
   const toast = useToast();
   const { refresh: refreshNotifications } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Memakai state & handler global dari PosContext
   const {
@@ -59,9 +59,6 @@ export function PosPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState(0);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [paidSale, setPaidSale] = useState<Awaited<
-    ReturnType<typeof checkoutSaleApi>
-  > | null>(null);
   const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
     null,
@@ -185,9 +182,9 @@ export function PosPage() {
         setWaitingPaymentSale(paid);
         setCheckoutOpen(false);
       } else {
-        setPaidSale(paid);
         setCheckoutOpen(false);
         refreshNotifications();
+        navigate(`/pos/struk/${paid.id}`);
       }
     } catch (e) {
       const err = e as { message?: string; errors?: Record<string, string[]> };
@@ -203,7 +200,6 @@ export function PosPage() {
   };
 
   const reset = () => {
-    setPaidSale(null);
     setCart([]);
     setPaidAmount(0);
     serviceDataRef.current = {
@@ -218,9 +214,9 @@ export function PosPage() {
       <WaitingPaymentModal
         sale={waitingPaymentSale}
         onPaid={(s) => {
-          setPaidSale(s);
           setWaitingPaymentSale(null);
           refreshNotifications();
+          navigate(`/pos/struk/${s.id}`);
         }}
         onExpired={() => {
           setWaitingPaymentSale(null);
@@ -234,16 +230,6 @@ export function PosPage() {
           );
           reset();
         }}
-      />
-    );
-  }
-
-  if (paidSale) {
-    return (
-      <ReceiptView
-        sale={paidSale}
-        onClose={reset}
-        customerName={paidSale.customer?.name ?? ""}
       />
     );
   }
@@ -326,7 +312,7 @@ export function PosPage() {
                     Sparepart tidak ditemukan.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
                     {filteredProducts
                       .filter((p) => p.is_active)
                       .slice(0, 60)
@@ -340,41 +326,63 @@ export function PosPage() {
                             key={p.id}
                             onClick={() => addProduct(p)}
                             disabled={p.current_stock <= 0}
-                            className={`bg-white rounded-2xl p-4 border transition-all text-left flex flex-col justify-between relative group hover:shadow-md ${
+                            className={`bg-white rounded-2xl p-3.5 border transition-all text-left flex items-center gap-3 relative group hover:shadow-md min-h-[104px] ${
                               inCart
-                                ? "border-blue-600 ring-1 ring-blue-600"
+                                ? "border-blue-600 ring-1 ring-blue-600 bg-blue-50/20"
                                 : "border-slate-200/80 hover:border-blue-400"
                             } ${p.current_stock <= 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
-                            <div className="flex items-start gap-3 w-full">
-                              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                                <span className="text-lg">⚙️</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-xs text-slate-800 break-words group-hover:text-blue-600 transition-colors leading-snug">
+                            {/* Gambar / Ikon Produk */}
+                            <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
+                              {p.image ? (
+                                <img
+                                  src={p.image}
+                                  alt={p.name}
+                                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display =
+                                      "none";
+                                    const parent = (
+                                      e.target as HTMLElement
+                                    ).parentElement;
+                                    if (parent) {
+                                      parent.innerHTML =
+                                        '<span class="text-xl">⚙️</span>';
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-xl">⚙️</span>
+                              )}
+                            </div>
+
+                            {/* Informasi Produk (Nama, Harga, Stok) */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
+                              <div>
+                                <h3 className="font-bold text-xs text-slate-800 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
                                   {p.name}
                                 </h3>
                               </div>
-                            </div>
 
-                            <div className="mt-3 space-y-1">
-                              <p className="text-xs font-extrabold text-blue-600">
-                                {formatRupiah(p.sale_price)}
-                              </p>
-                              <div>
-                                <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${
-                                    p.current_stock <= 0
-                                      ? "bg-red-100 text-red-600"
-                                      : p.current_stock <= 5
-                                        ? "bg-amber-100 text-amber-700"
-                                        : "bg-emerald-100 text-emerald-700"
-                                  }`}
-                                >
-                                  {p.current_stock <= 0
-                                    ? "Stok Habis"
-                                    : `Stok: ${p.current_stock}`}
-                                </span>
+                              <div className="mt-1 space-y-1">
+                                <p className="text-xs font-black text-blue-600 leading-none">
+                                  {formatRupiah(p.sale_price)}
+                                </p>
+                                <div>
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md inline-block leading-none ${
+                                      p.current_stock <= 0
+                                        ? "bg-red-100 text-red-600"
+                                        : p.current_stock <= 5
+                                          ? "bg-amber-100 text-amber-700"
+                                          : "bg-emerald-100 text-emerald-700"
+                                    }`}
+                                  >
+                                    {p.current_stock <= 0
+                                      ? "Stok Habis"
+                                      : `Stok: ${p.current_stock}`}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </button>
@@ -400,7 +408,7 @@ export function PosPage() {
                     Jasa servis tidak ditemukan.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
                     {filteredServices
                       .filter((s) => s.is_active)
                       .map((s) => {
@@ -412,25 +420,21 @@ export function PosPage() {
                           <button
                             key={s.id}
                             onClick={() => addService(s)}
-                            className={`bg-white rounded-2xl p-4 border transition-all text-left flex flex-col justify-between relative group hover:shadow-md ${
+                            className={`bg-white rounded-2xl p-3.5 border transition-all text-left flex items-center gap-3 relative group hover:shadow-md min-h-[90px] ${
                               inCart
-                                ? "border-blue-600 ring-1 ring-blue-600"
+                                ? "border-blue-600 ring-1 ring-blue-600 bg-blue-50/20"
                                 : "border-slate-200/80 hover:border-blue-400"
                             }`}
                           >
-                            <div className="flex items-start gap-3 w-full">
-                              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                                <span className="text-lg">🛠️</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-xs text-slate-800 break-words group-hover:text-blue-600 transition-colors leading-snug">
-                                  {s.name}
-                                </h3>
-                              </div>
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-100">
+                              <span className="text-xl">🛠️</span>
                             </div>
 
-                            <div className="mt-3">
-                              <p className="text-xs font-extrabold text-blue-600">
+                            <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
+                              <h3 className="font-bold text-xs text-slate-800 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                                {s.name}
+                              </h3>
+                              <p className="text-xs font-black text-blue-600 leading-none mt-1">
                                 {formatRupiah(s.sale_price)}
                               </p>
                             </div>
@@ -463,18 +467,15 @@ export function PosPage() {
         </div>
       )}
 
-      {/* ---------------- TABLET & MOBILE CART DRAWER (TERBUKA DI SEBELAH KANAN) ---------------- */}
+      {/* ---------------- TABLET & MOBILE CART DRAWER ---------------- */}
       {tabletCartOpen && (
         <div className="fixed inset-0 z-50 xl:hidden">
-          {/* Overlay Transparan */}
           <div
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
             onClick={() => setTabletCartOpen(false)}
           />
 
-          {/* Flyout Sheet Kanan */}
           <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
-            {/* Header Drawer */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-blue-600" />
@@ -491,7 +492,6 @@ export function PosPage() {
               </button>
             </div>
 
-            {/* List Item Keranjang */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.map((item, index) => {
                 const name =
@@ -553,7 +553,6 @@ export function PosPage() {
               })}
             </div>
 
-            {/* Footer Calculation & Action */}
             <div className="p-4 border-t border-slate-100 space-y-3 bg-white">
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500 font-medium">
@@ -618,8 +617,16 @@ export function PosPage() {
             </button>
             <button
               onClick={doCheckout}
-              disabled={checkoutLoading}
-              className="flex items-center gap-2 bg-[#1d4ed8] hover:bg-blue-700 text-white font-semibold text-xs px-6 py-2.5 rounded-xl shadow-md transition-all"
+              disabled={
+                checkoutLoading ||
+                (!isOnlinePayment &&
+                  (paidAmount <= 0 || paidAmount < grandTotal))
+              }
+              className={`flex items-center gap-2 bg-[#1d4ed8] hover:bg-blue-700 text-white font-semibold text-xs px-6 py-2.5 rounded-xl shadow-md transition-all ${
+                !isOnlinePayment && (paidAmount <= 0 || paidAmount < grandTotal)
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
             >
               <CheckCircle2 className="h-4 w-4" />
               Selesaikan Pembayaran
@@ -761,6 +768,19 @@ export function PosPage() {
                       </span>
                     </div>
                   </div>
+                  {!isOnlinePayment &&
+                    paidAmount > 0 &&
+                    paidAmount < grandTotal && (
+                      <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-2.5">
+                        <span className="flex items-center gap-1.5">
+                          <span>⚠</span>
+                          <span>
+                            Jumlah bayar kurang Rp{" "}
+                            {formatRupiah(grandTotal - paidAmount)}
+                          </span>
+                        </span>
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="py-6 text-center text-xs text-slate-400">

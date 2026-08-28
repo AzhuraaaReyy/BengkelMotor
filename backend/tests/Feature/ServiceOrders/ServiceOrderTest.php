@@ -152,7 +152,7 @@ class ServiceOrderTest extends TestCase
         ])->json('data.id');
 
         $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", [
-            'payment_method' => 'CASH',
+            'payment_method' => 'CASH', 'paid_amount' => 50000,
         ])->assertStatus(200);
 
         $order = ServiceOrder::find($orderId);
@@ -175,7 +175,7 @@ class ServiceOrderTest extends TestCase
             'service_order_id' => $orderId,
             'items' => [['item_type' => 'PRODUCT', 'product_id' => $product->id, 'quantity' => 1]],
         ])->json('data.id');
-        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH']);
+        $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", ['payment_method' => 'CASH', 'paid_amount' => 50000]);
 
         $response = $this->actingAs($cashier)->putJson("/api/v1/service-orders/{$orderId}", [
             'status' => 'OPEN',
@@ -208,7 +208,7 @@ class ServiceOrderTest extends TestCase
         ])->json('data.id');
 
         $this->actingAs($cashier)->postJson("/api/v1/sales/{$saleId}/checkout", [
-            'payment_method' => 'CASH',
+            'payment_method' => 'CASH', 'paid_amount' => 50000,
         ])->assertStatus(200);
 
         $order = ServiceOrder::find($orderId);

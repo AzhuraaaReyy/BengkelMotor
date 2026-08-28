@@ -26,7 +26,7 @@ class StockLedgerTest extends TestCase
             'item_name_snapshot' => $product->name,
         ]);
 
-        $ledger = new StockLedger();
+        $ledger = app(StockLedger::class);
         $ledger->decrementForSale($sale, $sale->items->where('item_type', SaleItem::TYPE_PRODUCT), $cashier->id, StockMovement::TYPE_SALE);
 
         $product->refresh();
@@ -49,7 +49,7 @@ class StockLedgerTest extends TestCase
             'item_name_snapshot' => $product->name,
         ]);
 
-        $ledger = new StockLedger();
+        $ledger = app(StockLedger::class);
         $ledger->incrementForSale($sale, $sale->items->where('item_type', SaleItem::TYPE_PRODUCT), $cashier->id, StockMovement::TYPE_SALE_REVERSAL);
 
         $product->refresh();
@@ -72,7 +72,7 @@ class StockLedgerTest extends TestCase
             'item_name_snapshot' => $product->name,
         ]);
 
-        $ledger = new StockLedger();
+        $ledger = app(StockLedger::class);
         $this->expectException(\RuntimeException::class);
         $ledger->decrementForSale($sale, $sale->items->where('item_type', SaleItem::TYPE_PRODUCT), $cashier->id, StockMovement::TYPE_SALE);
     }

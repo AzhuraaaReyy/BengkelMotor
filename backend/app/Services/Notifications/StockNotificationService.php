@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class StockNotificationService
 {
@@ -55,6 +56,7 @@ class StockNotificationService
             $this->notification->create($user, 'STOCK', $title, $message, [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
+                'product_image' => $product->image ? Storage::url($product->image) : null,
                 'current_stock' => $currentStock,
                 'min_stock' => self::STOCK_THRESHOLD,
                 'unit' => $product->unit,

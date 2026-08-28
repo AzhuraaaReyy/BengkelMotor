@@ -27,24 +27,32 @@ export interface StockAdjustPayload {
   note: string;
 }
 
-function toFormData(payload: ProductPayload): FormData {
+/**
+ * Konversi object payload ke FormData untuk pengiriman multipart/form-data.
+ * Aman dari injection data kosong dan memproses tipe boolean serta file dengan benar.
+ */
+function toFormData(payload: Partial<ProductPayload>): FormData {
   const formData = new FormData();
+
   Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      if (value instanceof File) {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    if (value instanceof File) {
+      if (value.size > 0) {
         formData.append(key, value);
-      } else {
-        formData.append(key, String(value));
       }
+    } else if (typeof value === "boolean") {
+      formData.append(key, value ? "1" : "0");
+    } else if (typeof value === "number") {
+      formData.append(key, String(value));
+    } else if (typeof value === "string" && value.trim() !== "") {
+      formData.append(key, value);
     }
   });
-  return formData;
-}
 
-export interface StockAdjustPayload {
-  type: "PURCHASE" | "ADJUSTMENT";
-  quantity: number;
-  note: string;
+  return formData;
 }
 
 export async function getProductsApi(params?: Record<string, unknown>) {
@@ -73,7 +81,10 @@ export async function updateProductApi(
   id: number,
   payload: Partial<ProductPayload>,
 ): Promise<Product> {
-  const formData = toFormData(payload as ProductPayload);
+  const formData = toFormData(payload);
+  // Method spoofing untuk Laravel menangani multipart/form-data via POST
+  formData.append("_method", "PUT");
+
   const { data } = await client.post<ApiResponse<Product>>(
     `/products/${id}`,
     formData,

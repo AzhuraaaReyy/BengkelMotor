@@ -341,8 +341,8 @@ Checklist:
 - [ ] Stock adjustment (ADJUSTMENT/PURCHASE) wajib note/reason untuk semua role; tanpa note ditolak (422).
 - [ ] Notifikasi stok `GET /products/low-stock` (threshold `current_stock < 5`) boleh diakses kedua role dan tidak mengirim field sensitif (`purchase_price`, snapshot).
 - [ ] Input Atur Stok adalah **delta bertanda** (`quantity`), bukan nilai absolut; `quantity = 0` dan `stock_after < 0` ditolak (422).
-- [ ] Restock berbayar (PURCHASE) membuat `Expense` otomatis **di transaksi DB yang sama** dengan perubahan stok; jika pembuatan expense gagal, stok & movement ikut rollback (atomicity diuji).
-- [ ] `ADJUSTMENT`/`OPENING` tidak pernah membuat expense.
+- [ ] Restock (PURCHASE) hanya mencatat stok masuk dan `stock_movements`; tidak membuat `Expense` otomatis.
+- [ ] `ADJUSTMENT`/`OPENING` juga tidak pernah membuat expense. Pengeluaran hanya dicatat manual oleh Admin melalui Manajemen Pengeluaran.
 
 ---
 
@@ -406,8 +406,8 @@ Checklist:
 - [ ] Perubahan expense sensitif tercatat audit log.
 - [ ] Expense tidak dapat dimanipulasi untuk menjadi nominal negatif.
 - [ ] Dashboard/report menggunakan data expense dari database dan tidak mempercayai nilai hasil perhitungan dari frontend.
-- [ ] Expense `source = 'STOCK_PURCHASE'` (otomatis dari restock) tidak dapat diubah lewat PUT expense (403 `EXPENSE_LOCKED`); koreksi melalui Atur Stok baru.
-- [ ] Expense restock dibuat atomically dengan perubahan stok (transaksi DB sama) dan ter-link ke `stock_movements.id`; tidak ada double entry manual.
+- [ ] Expense legacy `source = 'STOCK_PURCHASE'` tetap tidak dapat diubah lewat PUT expense (403 `EXPENSE_LOCKED`).
+- [ ] Atur Stok tidak membuat expense otomatis; tidak ada jalur kasir untuk mencatat pengeluaran di luar endpoint expense Admin-only.
 
 ### Estimasi Hasil Usaha
 
@@ -446,7 +446,7 @@ Checklist:
 
 ### Konteks khusus: harga beli untuk Atur Stok
 
-Kasir **tetap** tidak mendapatkan `purchase_price` dari `GET /products` default (POS/catalog). Satu-satunya pengecualian: `GET /products?include_cost=1` — hanya dikirim oleh halaman **Produk & Stok** agar modal Atur Stok dapat menampilkan pratinjau total pengeluaran restock (`quantity × purchase_price`). POS tidak pernah mengirim flag ini. Diuji pada `ProductStockTest::test_cashier_sees_purchase_price_only_when_include_cost_is_requested`.
+Kasir **tetap** tidak mendapatkan `purchase_price` dari `GET /products` default (POS/catalog). Satu-satunya pengecualian: `GET /products?include_cost=1` — hanya dikirim oleh halaman **Produk & Stok** untuk konteks pengelolaan stok. POS tidak pernah mengirim flag ini. Diuji pada `ProductStockTest::test_cashier_sees_purchase_price_only_when_include_cost_is_requested`.
 
 Laravel API Resource/DTO atau serializer setara harus digunakan secara konsisten untuk membatasi field response.
 

@@ -23,9 +23,16 @@ class Notification extends Model
         'created_at' => 'datetime',
     ];
 
+    protected $appends = ['product_image'];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getProductImageAttribute(): ?string
+    {
+        return $this->data['product_image'] ?? null;
     }
 
     public function isRead(): bool

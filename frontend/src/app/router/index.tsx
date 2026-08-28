@@ -4,6 +4,7 @@ import { useAuth } from "@/app/auth/AuthContext";
 import type { ReactNode } from "react";
 import type { Role } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
+import { ReceiptShell } from "@/components/layout/ReceiptShell";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { PosPage } from "@/features/pos/PosPage";
@@ -92,7 +93,6 @@ export const router = createBrowserRouter([
       },
       { path: "pos", element: <PosPage /> },
       { path: "riwayat", element: <SalesHistoryPage /> },
-      { path: "riwayat/:id/struk", element: <ReceiptPage /> },
       { path: "produk", element: <ProductsPage /> },
       { path: "produk/:id", element: <ProductsPage /> },
       { path: "jasa", element: <ServicesPage /> },
@@ -129,6 +129,26 @@ export const router = createBrowserRouter([
         ),
       },
     ],
+  },
+  {
+    path: "riwayat/:id/struk",
+    element: (
+      <RequireAuth>
+        <ReceiptShell>
+          <ReceiptPage />
+        </ReceiptShell>
+      </RequireAuth>
+    ),
+  },
+  {
+    path: "pos/struk/:id",
+    element: (
+      <RequireAuth>
+        <ReceiptShell>
+          <ReceiptPage />
+        </ReceiptShell>
+      </RequireAuth>
+    ),
   },
   { path: "*", element: <Navigate to="/" replace /> },
 ]);

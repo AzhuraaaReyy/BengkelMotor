@@ -25,6 +25,8 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
+        $perPage = min(max($request->integer('per_page', 10), 1), 500);
+
         $sales = Sale::with(['cashier:id,name', 'customer:id,name', 'latestCharge'])
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->when($request->search, function ($q, $s) {
@@ -32,7 +34,7 @@ class SaleController extends Controller
                 $q->where('sale_code', 'like', "%{$sanitized}%");
             })
             ->orderByDesc('created_at')
-            ->paginate(15)
+            ->paginate($perPage)
             ->through(fn (Sale $sale) => new SaleResource($sale));
 
         return response()->json(['data' => $sales]);

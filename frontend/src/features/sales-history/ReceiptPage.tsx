@@ -40,7 +40,7 @@ export function ReceiptPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <LoadingState label="Memuat struk..." />
       </div>
     );
@@ -48,23 +48,17 @@ export function ReceiptPage() {
 
   if (error || !sale) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
         <ErrorState message={error || "Transaksi tidak ditemukan."} onRetry={() => window.location.reload()} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg">
-      <main className="p-4 md:p-6">
-        <div className="max-w-2xl mx-auto">
-          <ReceiptView
-            sale={sale}
-            onClose={() => navigate("/riwayat")}
-            customerName={sale.customer?.name ?? ""}
-          />
-        </div>
-      </main>
-    </div>
+    <ReceiptView
+      sale={sale}
+      onClose={() => navigate("/pos")}
+      customerName={sale.customer?.name ?? ""}
+    />
   );
 }
