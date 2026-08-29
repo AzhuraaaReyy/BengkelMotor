@@ -48,7 +48,20 @@ class ProductController extends Controller
             ? 1000
             : min(max($request->integer('per_page', 15), 1), 500);
 
-        $products = $query->orderBy('name')->paginate($perPage)
+        // Sort by stock status: Out of Stock (0) → Low Stock (1) → Normal (2)
+        // Then by name for products in the same status
+        $query->selectRaw('
+            products.*,
+            CASE
+                WHEN current_stock = 0 THEN 0
+                WHEN current_stock <= min_stock THEN 1
+                ELSE 2
+            END as stock_status_order
+        ')
+        ->orderBy('stock_status_order')
+        ->orderBy('name');
+
+        $products = $query->paginate($perPage)
             ->through(fn (Product $product) => new ProductResource($product));
 
         return response()->json(['data' => $products]);

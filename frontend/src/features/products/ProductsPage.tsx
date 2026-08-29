@@ -15,11 +15,11 @@ import { useNotifications } from "@/lib/useNotifications";
 import { useAuth } from "@/app/auth/AuthContext";
 import { useProducts, useProductMovements } from "@/lib/useProducts";
 import type { ProductPayload } from "@/lib/api/products";
-import { formatRupiah, formatQuantity, formatDateTime } from "@/lib/formatters";
-import { STOCK_MOVEMENT_LABEL } from "@/lib/constants";
+import { formatRupiah, formatQuantity } from "@/lib/formatters";
 import { PlusIcon, EditIcon } from "@/components/shared/icons";
 import { resizeImage } from "@/lib/imageUtils";
-import type { Product, StockMovement } from "@/types";
+import type { Product } from "@/types";
+import { HistoryProductPage } from "./HistoryProductPage";
 import {
   Search,
   LayoutGrid,
@@ -30,10 +30,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Info,
-  Download,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 interface FormState {
@@ -109,7 +105,7 @@ function StockAdjustmentModal({
   };
 
   return (
-    <Modal open={!!product} onClose={onClose} title="Atur Stok" size="md">
+    <Modal open={!!product} onClose={onClose} title="Atur Stok" size="md" hideScrollbar>
       <div className="space-y-4 font-sans text-slate-800">
         {/* Card Ringkasan Produk Top */}
         <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
@@ -302,350 +298,6 @@ function StockAdjustmentModal({
   );
 }
 
-// =========================================================================
-// 2. Sub-Komponen Reusable: Stock History Modal (Presisi Sesuai Gambar)
-// =========================================================================
-function StockHistoryModal({
-  product,
-  movements,
-  loading,
-  onClose,
-}: {
-  product: Product | null;
-  movements: StockMovement[];
-  loading: boolean;
-  onClose: () => void;
-}) {
-  const [directionFilter, setDirectionFilter] = useState<string>("ALL");
-
-  const filteredMovements = useMemo(() => {
-    return (movements || []).filter((m) => {
-      if (directionFilter !== "ALL" && m.direction !== directionFilter)
-        return false;
-      return true;
-    });
-  }, [movements, directionFilter]);
-
-  if (!product) return null;
-
-  const isLowStock = product.current_stock <= product.min_stock;
-  const isOutOfStock = product.current_stock <= 0;
-  const lastMovement = movements?.[0];
-
-  return (
-    <Modal open={!!product} onClose={onClose} size="lg" hideScrollbar={true}>
-      <div className="space-y-4 font-sans text-slate-800">
-        {/* Header Informatif Produk */}
-        <div className="flex items-start justify-between gap-4 pb-1">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="h-14 w-14 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Package className="h-7 w-7 text-slate-300" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-base text-slate-900 leading-snug truncate">
-                Riwayat Stok: {product.name}
-              </h3>
-              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400 font-medium truncate">
-                <span>
-                  SKU:{" "}
-                  <strong className="font-mono text-slate-600">
-                    {product.sku}
-                  </strong>
-                </span>
-                <span>•</span>
-                <span>
-                  Kategori:{" "}
-                  <strong className="text-slate-600">
-                    {product.category || "General"}
-                  </strong>
-                </span>
-              </div>
-              <div className="mt-1">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block ${
-                    product.is_active
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-200 text-slate-600"
-                  }`}
-                >
-                  {product.is_active ? "Aktif" : "Nonaktif"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Summary Cards Panel */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/70">
-          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shrink-0">
-              <Package className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-slate-400 leading-tight">
-                Stok Saat Ini
-              </p>
-              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
-                {formatQuantity(product.current_stock)} {product.unit}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
-            <div>
-              <p className="text-[11px] font-medium text-slate-400 leading-tight">
-                Stok Minimum
-              </p>
-              <p className="text-sm font-extrabold text-slate-900 mt-0.5">
-                {formatQuantity(product.min_stock)} {product.unit}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pr-2 border-r border-slate-200/60 last:border-r-0">
-            <div>
-              <p className="text-[11px] font-medium text-slate-400 leading-tight">
-                Status Stok
-              </p>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block mt-1 ${
-                  isOutOfStock
-                    ? "bg-red-100 text-red-700"
-                    : isLowStock
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-emerald-100 text-emerald-700"
-                }`}
-              >
-                {isOutOfStock ? "Habis" : isLowStock ? "Menipis" : "Aman"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Clock className="h-4 w-4 text-slate-400 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-slate-400 leading-tight">
-                Terakhir Diperbarui
-              </p>
-              <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">
-                {lastMovement ? formatDateTime(lastMovement.created_at) : "-"}
-              </p>
-              <p className="text-[10px] text-slate-400 font-medium truncate">
-                Oleh: {lastMovement?.created_by_name || "Sistem"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-       
-
-        {/* Tabel Data Riwayat */}
-        {loading ? (
-          <div className="py-12">
-            <LoadingState />
-          </div>
-        ) : filteredMovements.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center border border-slate-200/80 text-slate-400 space-y-2">
-            <History className="h-8 w-8 mx-auto stroke-[1.5] text-slate-300" />
-            <p className="text-xs font-medium">
-              Tidak ada catatan riwayat pergerakan stok.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Tampilan Desktop & Tablet (>= 640px) */}
-            <div className="hidden sm:block overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xs">
-              <div className="max-h-[320px] overflow-y-auto hide-scrollbar">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-xs">
-                    <tr>
-                      <th className="py-3 px-4">ARAH</th>
-                      <th className="py-3 px-4">TIPE</th>
-                      <th className="py-3 px-4 text-center">PERUBAHAN</th>
-                      <th className="py-3 px-4 text-center">SEBELUM</th>
-                      <th className="py-3 px-4 text-center">SESUDAH</th>
-                      <th className="py-3 px-4">PETUGAS</th>
-                      <th className="py-3 px-4">KETERANGAN</th>
-                      <th className="py-3 px-4 text-right">WAKTU</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {filteredMovements.map((r) => {
-                      const isPositive = r.quantity_change > 0;
-                      return (
-                        <tr
-                          key={r.id}
-                          className="hover:bg-slate-50/70 transition-colors"
-                        >
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                                isPositive
-                                  ? "bg-emerald-100/70 text-emerald-700"
-                                  : "bg-red-100/70 text-red-700"
-                              }`}
-                            >
-                              {isPositive ? (
-                                <ArrowUpCircle className="h-3.5 w-3.5" />
-                              ) : (
-                                <ArrowDownCircle className="h-3.5 w-3.5" />
-                              )}
-                              {isPositive ? "Masuk" : "Keluar"}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap">
-                            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px]">
-                              {(STOCK_MOVEMENT_LABEL as Record<string, string>)[
-                                r.type
-                              ] || r.type}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center whitespace-nowrap">
-                            <span
-                              className={`font-black tabular-nums text-xs ${
-                                isPositive ? "text-emerald-600" : "text-red-600"
-                              }`}
-                            >
-                              {isPositive ? "+" : ""}
-                              {formatQuantity(r.quantity_change)} {product.unit}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center whitespace-nowrap font-semibold text-slate-500">
-                            {r.stock_before ?? "-"}
-                          </td>
-                          <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-slate-900">
-                            {r.stock_after ?? "-"}
-                          </td>
-                          <td className="py-3 px-4 whitespace-nowrap font-semibold text-slate-700">
-                            {r.created_by_name || "Sistem"}
-                          </td>
-                          <td className="py-3 px-4 text-slate-500 max-w-[180px] truncate">
-                            {r.note || "-"}
-                          </td>
-                          <td className="py-3 px-4 text-right whitespace-nowrap text-slate-400 text-[11px]">
-                            {formatDateTime(r.created_at)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Tampilan Mobile (< 640px) */}
-            <div className="sm:hidden space-y-2.5 max-h-[340px] overflow-y-auto hide-scrollbar">
-              {filteredMovements.map((r) => {
-                const isPositive = r.quantity_change > 0;
-                return (
-                  <div
-                    key={r.id}
-                    className="p-3 bg-white border border-slate-200/80 rounded-2xl shadow-2xs space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            isPositive
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {isPositive ? "Masuk" : "Keluar"}
-                        </span>
-                        <span className="font-bold text-xs text-slate-800">
-                          {(STOCK_MOVEMENT_LABEL as Record<string, string>)[
-                            r.type
-                          ] || r.type}
-                        </span>
-                      </div>
-                      <span
-                        className={`font-black text-xs tabular-nums ${
-                          isPositive ? "text-emerald-600" : "text-red-600"
-                        }`}
-                      >
-                        {isPositive ? "+" : ""}
-                        {formatQuantity(r.quantity_change)} {product.unit}
-                      </span>
-                    </div>
-
-                    {/* Stok Sebelum & Sesudah */}
-                    <div className="flex items-center justify-center gap-3 py-2 bg-slate-50/50 rounded-lg border border-slate-100">
-                      <div className="text-center">
-                        <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">
-                          Sebelum
-                        </p>
-                        <p className="text-xs font-bold text-slate-600 tabular-nums">
-                          {r.stock_before ?? "-"}{" "}
-                          {r.stock_before != null ? product.unit : ""}
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-slate-200"></div>
-                      <div className="text-center">
-                        <p className="text-[9px] text-slate-400 font-medium uppercase mb-0.5">
-                          Sesudah
-                        </p>
-                        <p className="text-xs font-bold text-slate-900 tabular-nums">
-                          {r.stock_after ?? "-"}{" "}
-                          {r.stock_after != null ? product.unit : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    {r.note && (
-                      <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl font-medium border border-slate-100 leading-snug">
-                        {r.note}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                      <span>Petugas: {r.created_by_name || "Sistem"}</span>
-                      <span>{formatDateTime(r.created_at)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Footer Pagination */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Menampilkan 1 - {filteredMovements.length} dari{" "}
-            {filteredMovements.length} riwayat
-          </span>
-
-          <div className="flex items-center gap-1">
-            <button
-              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 disabled:opacity-40"
-              disabled
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold text-xs">
-              1
-            </span>
-            <button
-              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 disabled:opacity-40"
-              disabled
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 // =========================================================================
 // 3. Mobile Card & Grid Item Komponen Halaman Produk
@@ -917,6 +569,18 @@ export function ProductsPage() {
       rowIndex: (page - 1) * 12 + idx + 1,
     }));
   }, [data, selectedCategory, page]);
+
+  // Jika `moveTarget` dipilih, tampilkan halaman penuh riwayat alih-alih modal
+  if (moveTarget) {
+    return (
+      <HistoryProductPage
+        product={moveTarget}
+        movements={movements}
+        loading={moveLoading}
+        onBack={() => setMoveTarget(null)}
+      />
+    );
+  }
 
   const closeFormModal = () => {
     if (form.imagePreview && form.imagePreview.startsWith("blob:")) {
@@ -1474,14 +1138,6 @@ export function ProductsPage() {
         onClose={() => setAdjustTarget(null)}
         onSave={doAdjust}
         saving={adjustSaving}
-      />
-
-      {/* Modal Riwayat Stok Sesuai Referensi Gambar */}
-      <StockHistoryModal
-        product={moveTarget}
-        movements={movements}
-        loading={moveLoading}
-        onClose={() => setMoveTarget(null)}
       />
     </div>
   );

@@ -359,7 +359,7 @@ export function PosPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3">
                       {displayedProducts.map((p) => {
                         const inCart = cart.some(
                           (c) =>
@@ -475,7 +475,7 @@ export function PosPage() {
                     Jasa servis tidak ditemukan.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-3">
                     {filteredServices
                       .filter((s) => s.is_active)
                       .map((s) => {
@@ -539,143 +539,27 @@ export function PosPage() {
         </div>
       )}
 
-      {/* ---------------- TABLET & MOBILE CART DRAWER ---------------- */}
-      {tabletCartOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden">
-          <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
-            onClick={() => setTabletCartOpen(false)}
-          />
+      <RightCartSidebar
+        isOpenMobile={tabletCartOpen}
+        onCloseMobile={() => setTabletCartOpen(false)}
+      />
 
-          <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5 text-blue-600" />
-                <h2 className="font-bold text-slate-900 text-base">
-                  Detail Pesanan
-                </h2>
-              </div>
-              <button
-                onClick={() => setTabletCartOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                aria-label="Tutup"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {cart.map((item, index) => {
-                const name =
-                  item.item_type === "PRODUCT"
-                    ? item.product?.name
-                    : item.service?.name;
-                const price =
-                  item.item_type === "PRODUCT"
-                    ? (item.product?.sale_price ?? 0)
-                    : (item.service?.sale_price ?? 0);
-
-                // PENAMBAHAN: Pengecekan sisa stok produk di drawer keranjang
-                const currentStock =
-                  item.item_type === "PRODUCT" && item.product
-                    ? (remainingStockMap.get(item.product.id) ?? 0)
-                    : Infinity;
-
-                return (
-                  <div
-                    key={index}
-                    className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-bold text-xs text-slate-800 break-words">
-                          {name}
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {formatRupiah(price)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => removeLine(index)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <TrashIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg p-0.5">
-                        <button
-                          onClick={() => updateQty(index, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="p-1 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
-                        >
-                          <MinusIcon className="h-3 w-3" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-bold text-slate-800">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQty(index, item.quantity + 1)}
-                          disabled={currentStock <= 0}
-                          className="p-1 hover:bg-slate-100 rounded text-slate-600 disabled:opacity-30"
-                        >
-                          <PlusIcon className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <span className="font-extrabold text-xs text-slate-900">
-                        {formatRupiah(price * item.quantity)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="p-4 border-t border-slate-100 space-y-3 bg-white">
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between text-slate-500 font-medium">
-                  <span>Subtotal</span>
-                  <span className="font-bold text-slate-800">
-                    {formatRupiah(subtotal)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-slate-500 font-medium">
-                  <span>Diskon</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={subtotal}
-                    value={discount || ""}
-                    onChange={(e) =>
-                      setDiscount(Math.max(0, Number(e.target.value)))
-                    }
-                    placeholder="Rp 0"
-                    className="w-24 text-right bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center pt-2 font-bold text-slate-900 text-sm border-t border-slate-100">
-                  <span>Total</span>
-                  <span className="text-base text-slate-900">
-                    {formatRupiah(grandTotal)}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setTabletCartOpen(false);
-                  setCheckoutOpen(true);
-                }}
-                className="w-full bg-[#1d4ed8] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-between text-xs"
-              >
-                <span>Lanjut Pembayaran</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+      {/* ---------------- TABLET & MOBILE BOTTOM BAR ---------------- */}
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-3 xl:hidden">
+          <button
+            onClick={() => setTabletCartOpen(true)}
+            className="flex w-full items-center justify-between rounded-2xl bg-blue-600 px-4 py-3 text-white shadow-lg shadow-blue-500/20 active:scale-[0.99] transition-transform"
+          >
+            <span className="text-xs font-bold">
+              Keranjang ({cart.reduce((acc, item) => acc + item.quantity, 0)}{" "}
+              Item) - Lihat Pesanan
+            </span>
+            <span className="flex items-center gap-1.5 text-xs font-bold">
+              <span>{formatRupiah(grandTotal)}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </button>
         </div>
       )}
 

@@ -356,4 +356,32 @@ class ProductStockTest extends TestCase
         $this->assertSame(2, $response->json('counts.low'));
         $this->assertSame(3, $response->json('counts.total'));
     }
+
+    public function test_products_are_sorted_by_stock_status_out_of_stock_first(): void
+    {
+        $admin = $this->admin();
+        Product::factory()->create(['name' => 'Normal Stock A', 'current_stock' => 100, 'min_stock' => 10]);
+        Product::factory()->create(['name' => 'Out of Stock B', 'current_stock' => 0, 'min_stock' => 10]);
+        Product::factory()->create(['name' => 'Low Stock C', 'current_stock' => 5, 'min_stock' => 10]);
+        Product::factory()->create(['name' => 'Out of Stock D', 'current_stock' => 0, 'min_stock' => 5]);
+        Product::factory()->create(['name' => 'Low Stock E', 'current_stock' => 3, 'min_stock' => 10]);
+        Product::factory()->create(['name' => 'Normal Stock F', 'current_stock' => 50, 'min_stock' => 5]);
+
+        $response = $this->actingAs($admin)->getJson('/api/v1/products?per_page=100');
+
+        $response->assertStatus(200);
+        $names = collect($response->json('data.data'))->pluck('name')->toArray();
+
+        // Out of stock products should come first (sorted alphabetically within group)
+        $this->assertSame('Out of Stock B', $names[0]);
+        $this->assertSame('Out of Stock D', $names[1]);
+
+        // Low stock products should come second (sorted alphabetically within group)
+        $this->assertSame('Low Stock C', $names[2]);
+        $this->assertSame('Low Stock E', $names[3]);
+
+        // Normal stock products should come last (sorted alphabetically within group)
+        $this->assertSame('Normal Stock A', $names[4]);
+        $this->assertSame('Normal Stock F', $names[5]);
+    }
 }
