@@ -20,8 +20,8 @@ class VoidSaleService
         private StockLedger $ledger,
     ) {}
 
-    /**Admin-only void of a PAID sale. Atomically marks sale VOID, restores
-     * stock via VOID_RETURN movements, and writes an audit log.
+    /**Void of a sale. Allows CASHIER to void DRAFT/PENDING sales, ADMIN to void PAID sales.
+     * Returns stock via REVERSAL movements and writes audit log.
      */
     public function void(Sale $sale, string $reason): Sale
     {
@@ -29,14 +29,28 @@ class VoidSaleService
         if (!$user instanceof User) {
             throw new RuntimeException('Unauthenticated.', 401);
         }
-        if (!$user->isAdmin()) {
-            throw new RuntimeException('Only Admin can void a paid sale.', 403);
-        }
         if (trim($reason) === '') {
             throw new RuntimeException('Void reason is required.', 422);
         }
-        if ($sale->status !== Sale::STATUS_PAID) {
-            throw new RuntimeException('Only PAID sales can be voided.', 409);
+
+        // Kasir bisa void transaksi DRAFT atau PENDING
+        // Admin bisa void transaksi DRAFT, PENDING, atau PAID
+        if ($user->isCashier() && !in_array($sale->status, [Sale::STATUS_DRAFT, Sale::STATUS_PENDING], true)) {
+            throw new RuntimeException('Kasir hanya bisa membatalkan transaksi DRAFT atau PENDING.', 403);
+        }
+        if ($user->isAdmin()) {
+            // Admin bisa void semua status
+        } else {
+            // Kasir hanya bisa void DRAFT/PENDING
+            if ($sale->status === Sale::STATUS_PAID) {
+                throw new RuntimeException('Kasir tidak bisa membatalkan transaksi PAID. Hubungi admin.', 403);
+            }
+            if ($sale->status === Sale::STATUS_VOID) {
+                throw new RuntimeException('Transaksi sudah dibatalkan.', 409);
+            }
+            if ($sale->status === Sale::STATUS_EXPIRED) {
+                throw new RuntimeException('Transaksi sudah kedaluwarsa.', 409);
+            }
         }
 
         return DB::transaction(function () use ($sale, $reason, $user) {

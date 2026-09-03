@@ -23,7 +23,7 @@ class FakePaymentGateway implements PaymentGateway
                 qrString: $this->generateQrisEmvco($request->orderId, $request->saleCode, (int) $request->grossAmount),
                 deepLink: null,
                 vaNumber: null,
-                expiresAt: now()->addMinutes(10),
+                expiresAt: now()->addMinutes(5),
             ),
             'VA' => new GatewayCharge(
                 gatewayTransactionId: 'TX-VA-' . $request->orderId,
@@ -32,7 +32,7 @@ class FakePaymentGateway implements PaymentGateway
                 qrString: null,
                 deepLink: null,
                 vaNumber: '1234567890',
-                expiresAt: now()->addMinutes(10),
+                expiresAt: now()->addMinutes(5),
             ),
         };
     }

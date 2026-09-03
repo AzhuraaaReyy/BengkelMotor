@@ -32,12 +32,13 @@ class PaymentWebhookController extends Controller
 
         try {
             $notification = $this->gateway->parseNotification($payload);
+            
             if ($notification->status === 'PAID') {
                 $this->paymentService->settleFromGateway($notification);
             } elseif ($notification->status === 'EXPIRED') {
                 $sale = Sale::where('sale_code', $notification->orderId)->first();
-                if ($sale) {
-                    $this->paymentService->expire($sale, 'Webhook Midtrans: transaksi ditolak/kedaluwarsa.');
+                if ($sale && $sale->status === Sale::STATUS_PENDING) {
+                    $this->paymentService->expire($sale, 'Webhook Midtrans: transaksi kedaluwarsa (waktu 5 menit habis).');
                 }
             }
             return response()->json(['message' => 'ok']);

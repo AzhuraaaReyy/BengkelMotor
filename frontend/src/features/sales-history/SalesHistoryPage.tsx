@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -28,6 +28,7 @@ import type { Sale } from "@/types";
 export function SalesHistoryPage() {
   const toast = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { hasRole } = useAuth();
   const isAdmin = hasRole("ADMIN");
 
@@ -76,6 +77,40 @@ export function SalesHistoryPage() {
   useEffect(() => {
     load();
   }, [load, page]);
+
+  // Real-time polling untuk status transaksi PENDING
+  useEffect(() => {
+    if (status !== "" && status !== "PENDING") return;
+    
+    const poll = async () => {
+      try {
+        const res = await getSalesApi({
+          search: search || undefined,
+          status: status || undefined,
+          page,
+          per_page: 10,
+        });
+        setData(res.data);
+      } catch {
+        // Silent fail
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [search, status, page]);
+
+  // Handle resume payment dari search params
+  useEffect(() => {
+    const resumePaymentId = searchParams.get("resume_payment");
+    if (resumePaymentId) {
+      const id = Number(resumePaymentId);
+      if (!isNaN(id)) {
+        navigate(`/pos?resume_payment=${id}`);
+      }
+    }
+  }, [searchParams, navigate]);
 
   const openDetail = async (sale: Sale) => {
     setDetail(sale);

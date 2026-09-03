@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { PrinterIcon, ChevronLeftIcon } from "@/components/shared/icons";
 import { formatRupiah, formatNumber, formatDateTime } from "@/lib/formatters";
@@ -15,7 +16,9 @@ export function ReceiptView({
   onClose: () => void;
   customerName?: string;
 }) {
+  const [searchParams] = useSearchParams();
   const lastPrintTimeRef = useRef<number>(0);
+  const autoPrintTriggeredRef = useRef<boolean>(false);
 
   const handlePrint = () => {
     if (sessionStorage.getItem("receipt_printed") === "true") {
@@ -28,6 +31,22 @@ export function ReceiptView({
     sessionStorage.setItem("receipt_printed", "true");
     window.print();
   };
+
+  // Auto-print jika ada query param autoprint=true
+  useEffect(() => {
+    const shouldAutoPrint = searchParams.get("autoprint") === "true";
+    
+    if (shouldAutoPrint && !autoPrintTriggeredRef.current) {
+      autoPrintTriggeredRef.current = true;
+      
+      // Delay sedikit untuk memastikan rendering selesai
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     return () => {

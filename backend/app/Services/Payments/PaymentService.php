@@ -174,10 +174,12 @@ class PaymentService
             }
             $sale->load('items');
 
+            // Update payment charge status to EXPIRED
             $sale->paymentCharges()
                 ->where('status', PaymentCharge::STATUS_PENDING)
                 ->update(['status' => PaymentCharge::STATUS_EXPIRED]);
 
+            // Return stock untuk product items
             $actor = auth()->id() ?? $sale->cashier_id;
             $productItems = $sale->items->where('item_type', SaleItem::TYPE_PRODUCT);
             $this->ledger->incrementForSale($sale, $productItems, (int) $actor, StockMovement::TYPE_SALE_REVERSAL);
@@ -189,8 +191,28 @@ class PaymentService
                 AuditLog::ACTION_SALE_VOIDED,
                 'sale', $sale->id, null,
                 ['sale_code' => $sale->sale_code, 'status' => $sale->status],
-                $reason ?? 'Pembayaran kedaluwarsa / dibatalkan.'
+                $reason ?? 'Pembayaran kedaluwarsa / dibatalkan.',
+                $actor
             );
+
+            // Dispatch notification
+            try {
+                $notificationService = app(\App\Services\Notifications\NotificationService::class);
+                $notificationService->create(
+                    $sale->cashier,
+                    'TRANSACTION',
+                    'Transaksi Kedaluwarsa',
+                    "Transaksi {$sale->sale_code} kedaluwarsa (waktu pembayaran 5 menit habis)",
+                    [
+                        'sale_id' => $sale->id,
+                        'sale_code' => $sale->sale_code,
+                        'amount' => $sale->grand_total,
+                        'reason' => $reason ?? 'Waktu pembayaran habis',
+                    ]
+                );
+            } catch (\Exception $e) {
+                // Silent fail - notification not critical
+            }
 
             $sale->refresh();
             return $sale;

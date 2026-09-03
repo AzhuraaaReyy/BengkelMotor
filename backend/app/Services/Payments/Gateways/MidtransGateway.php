@@ -34,7 +34,7 @@ class MidtransGateway implements PaymentGateway
                 'quantity' => $i['quantity'],
             ], $request->items),
             'customer_details' => $request->customer ?? new \stdClass(),
-            'expiry' => ['unit' => 'minutes', 'duration' => 10],
+            'expiry' => ['unit' => 'minutes', 'duration' => 5],
         ];
 
         $payload['payment_type'] = match ($request->method) {
@@ -78,7 +78,7 @@ class MidtransGateway implements PaymentGateway
             qrString: $qrString,
             vaNumber: $body['va_numbers'][0]['va_number'] ?? null,
             deepLink: $deepLink,
-            expiresAt: isset($body['expiry_time']) ? new \DateTime($body['expiry_time']) : now()->addMinutes(10),
+            expiresAt: isset($body['expiry_time']) ? new \DateTime($body['expiry_time']) : now()->addMinutes(5),
         );
     }
 

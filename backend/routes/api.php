@@ -59,8 +59,8 @@ Route::prefix('v1')->group(function () {
         Route::get('sales/{sale}', [SaleController::class, 'show']);
         Route::put('sales/{sale}', [SaleController::class, 'update']);
         Route::post('sales/{sale}/checkout', [SaleController::class, 'checkout']);
-        Route::post('sales/{sale}/void', [SaleController::class, 'void'])->middleware('role:ADMIN');
-        Route::post('sales/{sale}/expire', [SaleController::class, 'expire'])->middleware('role:ADMIN');
+        Route::post('sales/{sale}/void', [SaleController::class, 'void'])->middleware('role:ADMIN,CASHIER');
+        Route::post('sales/{sale}/expire', [SaleController::class, 'expire'])->middleware('role:ADMIN,CASHIER');
 
         // Products
         Route::get('products', [ProductController::class, 'index']);

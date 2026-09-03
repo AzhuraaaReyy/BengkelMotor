@@ -15,11 +15,11 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_id')->nullable();
             $table->unsignedBigInteger('vehicle_id')->nullable();
             $table->unsignedBigInteger('service_order_id')->nullable()->unique();
-            $table->enum('status', ['DRAFT', 'PAID', 'VOID'])->default('DRAFT');
+            $table->enum('status', ['DRAFT', 'PENDING', 'PAID', 'EXPIRED', 'VOID'])->default('DRAFT');
             $table->decimal('subtotal', 15, 2)->default(0);
             $table->decimal('discount_amount', 15, 2)->default(0);
             $table->decimal('grand_total', 15, 2)->default(0);
-            $table->enum('payment_method', ['CASH', 'TRANSFER', 'QRIS', 'OTHER'])->nullable();
+            $table->enum('payment_method', ['CASH', 'QRIS', 'VA'])->nullable();
             $table->decimal('paid_amount', 15, 2)->nullable();
             $table->decimal('change_amount', 15, 2)->nullable();
             $table->dateTime('paid_at')->nullable();
