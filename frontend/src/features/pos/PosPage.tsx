@@ -2,28 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Modal } from "@/components/ui/Modal";
 import { PaymentMethodSelector } from "@/features/pos/PaymentMethodSelector";
-import { WaitingPaymentModal } from "@/features/pos/WaitingPaymentModal";
 import { useToast } from "@/components/ui/Toast";
 import { getProductsApi } from "@/lib/api/products";
 import { getServicesApi } from "@/lib/api/services";
 import { getCustomersApi } from "@/lib/api/customers";
-import { checkoutSaleApi, createSaleApi, getSaleApi } from "@/lib/api/sales";
+import { checkoutSaleApi, createSaleApi } from "@/lib/api/sales";
 import { useNotifications } from "@/lib/useNotifications";
 import { formatRupiah } from "@/lib/formatters";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { CustomerSelector } from "@/features/pos/CustomerSelector";
 import { usePos } from "@/features/pos/PosContext";
-import { PlusIcon, MinusIcon, TrashIcon } from "@/components/shared/icons";
 import { RightCartSidebar } from "@/features/pos/RightCartSidebar";
+import ilustrasi from "../../app/assets/ilustrasi.png";
 import type { Product, Service, Customer, PaymentMethod } from "@/types";
 import {
   Search,
-  ShoppingCart,
   ArrowRight,
-  X,
   Wallet,
   CheckCircle2,
   ChevronDown,
+  Printer,
 } from "lucide-react";
 
 export function PosPage() {
@@ -37,13 +35,10 @@ export function PosPage() {
     cart,
     setCart,
     discount,
-    setDiscount,
     subtotal,
     grandTotal,
     addProduct,
     addService,
-    updateQty,
-    removeLine,
     checkoutOpen,
     setCheckoutOpen,
   } = usePos();
@@ -58,15 +53,11 @@ export function PosPage() {
     "ALL" | "PRODUCT" | "SERVICE"
   >("ALL");
 
-  // =========================================================================
-  // PENAMBAHAN: State untuk batas tampilan produk pada tab 'Semua' (default 10)
-  // =========================================================================
   const [visibleProductLimit, setVisibleProductLimit] = useState(10);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState(0);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [waitingPaymentSale, setWaitingPaymentSale] = useState<any>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
     null,
   );
@@ -77,16 +68,10 @@ export function PosPage() {
     motorcycle_type: "",
   });
 
-  // =========================================================================
-  // PENAMBAHAN: Reset limit tampilan ke 10 jika pencarian / kategori berubah
-  // =========================================================================
   useEffect(() => {
     setVisibleProductLimit(10);
   }, [search, categoryFilter]);
 
-  // =========================================================================
-  // PENAMBAHAN: Map kalkulasi stok tersisa secara realtime di UI
-  // =========================================================================
   const remainingStockMap = useMemo(() => {
     const map = new Map<number, number>();
     products.forEach((p) => {
@@ -130,28 +115,6 @@ export function PosPage() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    const resumeId = searchParams.get("resume_payment");
-    if (!resumeId) return;
-
-    const resumeSale = async () => {
-      try {
-        const sale = await getSaleApi(Number(resumeId));
-        if (sale.status === "PENDING") {
-          setWaitingPaymentSale(sale);
-        } else {
-          toast.error("Transaksi sudah tidak aktif.");
-        }
-      } catch {
-        toast.error("Gagal memuat transaksi.");
-      } finally {
-        setSearchParams({}, { replace: true });
-      }
-    };
-
-    resumeSale();
-  }, [searchParams, setSearchParams]);
-
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "SERVICE") return [];
     const q = search.toLowerCase();
@@ -167,9 +130,6 @@ export function PosPage() {
     return services.filter((s) => s.name.toLowerCase().includes(q));
   }, [services, search, categoryFilter]);
 
-  // =========================================================================
-  // PENAMBAHAN: Pemotongan list produk aktif berdasar filter dan limit tab 'ALL'
-  // =========================================================================
   const activeProducts = useMemo(() => {
     return filteredProducts.filter((p) => p.is_active);
   }, [filteredProducts]);
@@ -183,6 +143,9 @@ export function PosPage() {
 
   const isOnlinePayment = ["QRIS", "VA"].includes(paymentMethod);
 
+  // =========================================================================
+  // FUNGSI CHECKOUT UTAMA
+  // =========================================================================
   const doCheckout = async () => {
     const svc = serviceDataRef.current;
     if (hasServiceItems && !svc.complaint.trim()) {
@@ -223,14 +186,10 @@ export function PosPage() {
             ? svc.motorcycle_type
             : undefined,
       });
-      if (isOnlinePayment) {
-        setWaitingPaymentSale(paid);
-        setCheckoutOpen(false);
-      } else {
-        setCheckoutOpen(false);
-        refreshNotifications();
-        navigate(`/pos/struk/${paid.id}`);
-      }
+
+      setCheckoutOpen(false);
+      refreshNotifications();
+      navigate(`/pos/struk/${paid.id}`);
     } catch (e) {
       const err = e as { message?: string; errors?: Record<string, string[]> };
       if (err.errors) {
@@ -244,46 +203,10 @@ export function PosPage() {
     }
   };
 
-  const reset = () => {
-    setCart([]);
-    setPaidAmount(0);
-    serviceDataRef.current = {
-      complaint: "",
-      diagnosis_note: "",
-      motorcycle_type: "",
-    };
-  };
-
-  if (waitingPaymentSale) {
-    return (
-      <WaitingPaymentModal
-        sale={waitingPaymentSale}
-        onPaid={(s) => {
-          setWaitingPaymentSale(null);
-          refreshNotifications();
-          navigate(`/pos/struk/${s.id}`);
-        }}
-        onExpired={() => {
-          setWaitingPaymentSale(null);
-          toast.error("Pembayaran kedaluwarsa. Stok sudah dikembalikan.");
-          reset();
-        }}
-        onClose={() => {
-          setWaitingPaymentSale(null);
-          toast.info(
-            "Tagihan tetap berjalan. Cek di Riwayat Transaksi untuk melanjutkan.",
-          );
-          reset();
-        }}
-      />
-    );
-  }
-
   return (
     <div className="flex gap-6 min-h-screen bg-[#f4f6fb] font-sans text-slate-800 -m-4 p-4 pb-24 md:-m-6 md:p-6 md:pb-6 items-start">
       {/* Area Katalog (Kiri) */}
       <div className="flex-1 min-w-0 space-y-6">
-        {/* Search Bar + Filter Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -343,7 +266,6 @@ export function PosPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* SECTION 1: SPAREPART */}
             {(categoryFilter === "ALL" || categoryFilter === "PRODUCT") && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -365,7 +287,6 @@ export function PosPage() {
                           (c) =>
                             c.item_type === "PRODUCT" && c.product?.id === p.id,
                         );
-                        // PENAMBAHAN: Ambil stok sisa realtime dari map
                         const currentStock =
                           remainingStockMap.get(p.id) ?? p.current_stock;
 
@@ -380,7 +301,6 @@ export function PosPage() {
                                 : "border-slate-200/80 hover:border-blue-400"
                             } ${currentStock <= 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
-                            {/* Gambar / Ikon Produk */}
                             <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100">
                               {p.image ? (
                                 <img
@@ -404,7 +324,6 @@ export function PosPage() {
                               )}
                             </div>
 
-                            {/* Informasi Produk (Nama, Harga, Stok) */}
                             <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
                               <div>
                                 <h3 className="font-bold text-xs text-slate-800 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
@@ -438,9 +357,6 @@ export function PosPage() {
                       })}
                     </div>
 
-                    {/* ========================================================================= */}
-                    {/* PENAMBAHAN: Tombol Tampilkan Lebih Banyak khusus untuk Tab 'Semua' (ALL)  */}
-                    {/* ========================================================================= */}
                     {categoryFilter === "ALL" &&
                       activeProducts.length > visibleProductLimit && (
                         <div className="mt-4 text-center">
@@ -460,7 +376,6 @@ export function PosPage() {
               </div>
             )}
 
-            {/* SECTION 2: JASA SERVIS */}
             {(categoryFilter === "ALL" || categoryFilter === "SERVICE") && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
@@ -516,12 +431,10 @@ export function PosPage() {
         )}
       </div>
 
-      {/* ---------------- RIGHT CART SIDEBAR DESKTOP (FIXED POS) ---------------- */}
       <div className="hidden xl:block w-80 shrink-0 sticky top-0 h-[calc(100vh-3rem)]">
         <RightCartSidebar />
       </div>
 
-      {/* ---------------- TABLET & MOBILE BOTTOM BAR ---------------- */}
       {cart.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-3 xl:hidden">
           <button
@@ -544,39 +457,21 @@ export function PosPage() {
         onCloseMobile={() => setTabletCartOpen(false)}
       />
 
-      {/* ---------------- TABLET & MOBILE BOTTOM BAR ---------------- */}
-      {cart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-3 xl:hidden">
-          <button
-            onClick={() => setTabletCartOpen(true)}
-            className="flex w-full items-center justify-between rounded-2xl bg-blue-600 px-4 py-3 text-white shadow-lg shadow-blue-500/20 active:scale-[0.99] transition-transform"
-          >
-            <span className="text-xs font-bold">
-              Keranjang ({cart.reduce((acc, item) => acc + item.quantity, 0)}{" "}
-              Item) - Lihat Pesanan
-            </span>
-            <span className="flex items-center gap-1.5 text-xs font-bold">
-              <span>{formatRupiah(grandTotal)}</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </span>
-          </button>
-        </div>
-      )}
-
       {/* ---------------- MODAL KONFIRMASI PEMBAYARAN ---------------- */}
       <Modal
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
-        title="Konfirmasi Pembayaran"
-        size="lg"
+        title="Payment Details"
+        size="md"
+        contentClassName="max-h-[70vh] overflow-y-auto px-6 py-4"
         footer={
-          <div className="flex items-center justify-end gap-3 w-full">
+          <div className="flex items-center justify-between w-full py-1">
             <button
               onClick={() => setCheckoutOpen(false)}
               disabled={checkoutLoading}
-              className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-2 px-5 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors"
             >
-              Batal
+              <span className="text-slate-400">✕</span> Batal
             </button>
             <button
               onClick={doCheckout}
@@ -585,37 +480,79 @@ export function PosPage() {
                 (!isOnlinePayment &&
                   (paidAmount <= 0 || paidAmount < grandTotal))
               }
-              className={`flex items-center gap-2 bg-[#1d4ed8] hover:bg-blue-700 text-white font-semibold text-xs px-6 py-2.5 rounded-xl shadow-md transition-all ${
+              className={`flex items-center gap-2 bg-[#1d4ed8] hover:bg-blue-700 text-white font-semibold text-xs px-5 py-2 rounded-xl shadow-md transition-all ${
                 !isOnlinePayment && (paidAmount <= 0 || paidAmount < grandTotal)
                   ? "opacity-50 cursor-not-allowed"
                   : ""
               }`}
             >
-              <CheckCircle2 className="h-4 w-4" />
-              Selesaikan Pembayaran
+              {isOnlinePayment ? (
+                <>
+                  <Printer className="h-4 w-4" />
+                  Cetak Struk
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Konfirmasi Pembayaran
+                </>
+              )}
             </button>
           </div>
         }
       >
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-[#f8fafc] border border-slate-200/80 p-5 flex items-center gap-4 shadow-2xs">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100">
-              <Wallet className="h-6 w-6" />
+        <div className="space-y-3.5">
+          <div className="-mt-1">
+            <p className="text-xs text-slate-500 font-medium">
+              Konfirmasi & metode pembayaran
+            </p>
+          </div>
+
+          {/* 1. Ringkasan Pesanan */}
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100">
+                <Wallet className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  Ringkasan Pesanan
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {cart.reduce((acc, item) => acc + item.quantity, 0)} item
+                  produk
+                </p>
+                <p className="text-[10px] text-slate-400">Total Pembayaran</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                TOTAL PEMBAYARAN
-              </p>
-              <p className="text-2xl font-black text-blue-600 mt-0.5">
+            <div className="text-right">
+              <p className="text-sm font-black text-blue-600">
                 {formatRupiah(grandTotal)}
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Mohon pilih metode pembayaran
-              </p>
+              <button
+                type="button"
+                className="text-[11px] text-slate-500 hover:text-blue-600 font-medium"
+              >
+                Lihat Detail ▼
+              </button>
             </div>
           </div>
 
+          {/* 2. Pilih Metode Pembayaran */}
           <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-800">
+              Pilih Metode Pembayaran
+            </label>
+            <PaymentMethodSelector
+              value={paymentMethod}
+              onChange={(m) =>
+                setPaymentMethod(m as keyof typeof PAYMENT_METHODS)
+              }
+            />
+          </div>
+
+          {/* 3. Pelanggan */}
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700">
               Pelanggan
             </label>
@@ -634,123 +571,169 @@ export function PosPage() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">
-              Metode Pembayaran
-            </label>
-            <PaymentMethodSelector
-              value={paymentMethod}
-              onChange={(m) =>
-                setPaymentMethod(m as keyof typeof PAYMENT_METHODS)
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-3">
+          {/* 4. Pembayaran (Dinamis: QRIS atau Tunai langsung tampil) */}
+          <div className="space-y-2">
+            <div>
               <p className="text-xs font-bold text-slate-800">
-                Detail Transaksi
+                {paymentMethod === "QRIS"
+                  ? "Pembayaran QRIS"
+                  : "Pembayaran Tunai"}
               </p>
-              <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
-                {cart.map((item, index) => {
-                  const name =
-                    item.item_type === "PRODUCT"
-                      ? item.product?.name
-                      : item.service?.name;
-                  const price =
-                    item.item_type === "PRODUCT"
-                      ? (item.product?.sale_price ?? 0)
-                      : (item.service?.sale_price ?? 0);
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <span className="text-slate-600 truncate flex-1 mr-2">
-                        {name}{" "}
-                        <span className="text-slate-400">
-                          {item.quantity} x {formatRupiah(price)}
-                        </span>
-                      </span>
-                      <span className="font-bold text-slate-800 tabular-nums">
-                        {formatRupiah(price * item.quantity)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 space-y-1.5 text-xs">
-                <div className="flex justify-between text-slate-500">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-slate-700">
-                    {formatRupiah(subtotal)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Diskon</span>
-                  <span className="font-semibold text-slate-700">
-                    {formatRupiah(discount)}
-                  </span>
-                </div>
-                <div className="flex justify-between pt-2 font-bold text-slate-900 border-t border-slate-100 text-sm">
-                  <span>Total Pembayaran</span>
-                  <span className="text-blue-600">
-                    {formatRupiah(grandTotal)}
-                  </span>
-                </div>
-              </div>
+              <p className="text-[11px] text-slate-500">
+                {paymentMethod === "QRIS"
+                  ? "Scan kode QR berikut menggunakan aplikasi e-wallet / m-banking Anda"
+                  : "Masukkan jumlah uang yang diberikan pelanggan"}
+              </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-3">
-              <p className="text-xs font-bold text-slate-800">
-                Pembayaran Tunai
-              </p>
-              {!isOnlinePayment ? (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500">
-                      Jumlah Bayar
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={paidAmount || ""}
-                      onChange={(e) => setPaidAmount(Number(e.target.value))}
-                      placeholder="Rp 0"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            {paymentMethod === "QRIS" ? (
+              /* ================= TAMPILAN QRIS LANGSUNG ================= */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-3 flex flex-col items-center justify-between text-center space-y-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-wide">
+                      BENGKEL PUTRA MOTOR
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-medium">
+                      NMID: ID1020304050607 <br /> A01
+                    </p>
+                  </div>
+
+                  <div className="bg-white border border-slate-100 rounded-xl p-2 w-36 h-36 flex items-center justify-center shadow-2xs">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BENGKEL_PUTRA_MOTOR_TOTAL_${grandTotal}`}
+                      alt="QRIS Code"
+                      className="w-full h-full object-contain"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-500">
-                      Kembalian
-                    </label>
-                    <div className="rounded-xl bg-emerald-50/80 border border-emerald-100 p-2.5">
-                      <span className="text-xs font-black text-emerald-600">
-                        {formatRupiah(Math.max(0, paidAmount - grandTotal))}
-                      </span>
-                    </div>
+
+                  <div className="flex items-center justify-between w-full px-2 pt-1 border-t border-slate-100">
+                    <span className="text-[10px] font-extrabold tracking-tighter text-blue-900">
+                      QRIS
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-medium">
+                      QR Code Standar Pembayaran Nasional
+                    </span>
                   </div>
-                  {!isOnlinePayment &&
-                    paidAmount > 0 &&
-                    paidAmount < grandTotal && (
-                      <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-2.5">
-                        <span className="flex items-center gap-1.5">
-                          <span>⚠</span>
-                          <span>
-                            Jumlah bayar kurang Rp{" "}
-                            {formatRupiah(grandTotal - paidAmount)}
-                          </span>
+
+                  <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1 pt-0.5">
+                    <span>🕒</span> Kode QR berlaku selama{" "}
+                    <span className="text-blue-600 font-bold">02:00 menit</span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3 flex flex-col justify-between space-y-2">
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-800">
+                      Cara Pembayaran
+                    </p>
+                    <ol className="text-[11px] text-slate-600 space-y-1 pl-4 list-decimal leading-snug">
+                      <li>Buka aplikasi e-wallet / m-banking Anda</li>
+                      <li>
+                        Pilih menu{" "}
+                        <span className="font-bold text-slate-800">
+                          Scan QR / QRIS
                         </span>
+                      </li>
+                      <li>Scan kode QR di samping</li>
+                      <li>Pastikan nominal sesuai, lalu konfirmasi</li>
+                    </ol>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                    <p className="text-[10px] text-slate-500 font-medium text-center">
+                      Menerima pembayaran dari semua e-wallet
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] font-bold text-slate-700 bg-white border border-slate-200/60 rounded-xl p-2">
+                      <span className="text-blue-600">gopay</span>
+                      <span className="text-purple-600">OVO</span>
+                      <span className="text-cyan-600">DANA</span>
+                      <span className="text-red-500">LinkAja!</span>
+                      <span className="text-orange-500">ShopeePay</span>
+                      <span className="text-blue-800">BRIMO</span>
+                      <span className="text-sky-600">livin'</span>
+                      <span className="text-blue-900">BCA</span>
+                    </div>
+                    <p className="text-[9px] text-slate-400 text-center">
+                      dan e-wallet lainnya
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ================= TAMPILAN TUNAI ================= */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-3 space-y-2.5 flex flex-col justify-between">
+                  {!isOnlinePayment ? (
+                    <div className="space-y-2">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                          TOTAL YANG HARUS DIBAYAR
+                        </label>
+                        <div className="text-sm font-black text-blue-600">
+                          {formatRupiah(grandTotal)}
+                        </div>
                       </div>
-                    )}
+
+                      <div className="space-y-1 pt-1 border-t border-slate-100">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                          UANG DIBAYARKAN
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={paidAmount || ""}
+                          onChange={(e) =>
+                            setPaidAmount(Number(e.target.value))
+                          }
+                          placeholder="Rp 0"
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                          UANG KEMBALIAN
+                        </label>
+                        <div className="rounded-xl bg-emerald-50/80 border border-emerald-100 p-2">
+                          <span className="text-xs font-black text-emerald-600">
+                            {formatRupiah(Math.max(0, paidAmount - grandTotal))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center text-xs text-slate-400">
+                      Metode pembayaran digital tidak memerlukan input tunai
+                      manual.
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="py-6 text-center text-xs text-slate-400">
-                  Metode pembayaran digital tidak memerlukan input tunai manual.
+
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-3 flex flex-col justify-between space-y-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-slate-800 font-bold text-xs">
+                      <span className="w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[9px]">
+                        ℹ
+                      </span>
+                      Informasi
+                    </div>
+                    <ul className="text-[11px] text-slate-500 space-y-0.5 pl-4 list-disc">
+                      <li>Pastikan jumlah uang yang diterima sesuai.</li>
+                      <li>Uang kembalian dihitung otomatis.</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-blue-50/30 rounded-xl border border-blue-100/50 p-1.5 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={ilustrasi}
+                      alt="Ilustrasi Transaksi Kasir"
+                      className="w-full h-28 md:h-32 object-cover object-center rounded-lg scale-110"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

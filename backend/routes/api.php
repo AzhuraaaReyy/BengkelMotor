@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentWebhookController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\SearchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,6 +45,9 @@ Route::prefix('v1')->group(function () {
     // Protected API (sesi dimulai oleh prepend di bootstrap/app.php).
     // throttle:api protects heavy endpoints (dashboard/report/export) from DoS.
     Route::group(['middleware' => ['auth:sanctum', 'throttle:api']], function () {
+
+        // Global Search
+        Route::get('search', [SearchController::class, 'index']);
 
         // Dashboard (Admin only)
         Route::get('dashboard', [DashboardController::class, 'index'])

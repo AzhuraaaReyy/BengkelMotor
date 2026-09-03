@@ -1,9 +1,12 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { MenuIcon, CloseIcon } from "@/components/shared/icons";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PosProvider } from "@/features/pos/PosContext";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { Search as SearchIcon } from "lucide-react";
+import { searchGlobalApi, type SearchResult } from "@/lib/api/search";
+import { formatRupiah } from "@/lib/formatters";
 
 const PAGE_META: Array<{ path: string; title: string; description: string }> = [
   {
@@ -57,6 +60,86 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchTimeoutRef = useRef<number | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      window.clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.length < 2) {
+      setSearchResults(null);
+      setSearchOpen(false);
+      setSearchError(null);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    searchTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        console.log("Searching for:", searchQuery);
+        const results = await searchGlobalApi(searchQuery);
+        console.log("Search results:", results);
+        setSearchResults(results);
+        setSearchOpen(true);
+      } catch (error: any) {
+        console.error("Search error:", error);
+        setSearchError(error?.message || "Terjadi kesalahan saat mencari");
+        setSearchResults(null);
+        setSearchOpen(true);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        window.clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  const handleSearchResultClick = (type: string, id: number) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults(null);
+
+    // Navigate based on type
+    switch (type) {
+      case "product":
+        navigate("/produk");
+        break;
+      case "service":
+        navigate("/jasa");
+        break;
+      case "customer":
+        navigate(`/pelanggan/${id}`);
+        break;
+      case "sale":
+        navigate(`/riwayat`);
+        break;
+    }
+  };
 
   const pageMeta = PAGE_META.find(
     (m) =>
@@ -133,8 +216,134 @@ export function AppShell() {
               </div>
             </div>
 
-            {/* Notification Bell */}
+            {/* Search & Notification */}
             <div className="flex items-center gap-3 shrink-0">
+              {/* Search Input */}
+              <div ref={searchRef} className="relative hidden md:block">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchResults && setSearchOpen(true)}
+                  placeholder="Cari..."
+                  className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+                />
+                
+                {/* Search Results Dropdown */}
+                {searchOpen && searchResults && searchResults.total > 0 && (
+                  <div className="absolute top-full mt-2 w-96 bg-white rounded-xl border border-slate-200 shadow-xl max-h-96 overflow-y-auto z-50">
+                    {/* Products */}
+                    {searchResults.products.length > 0 && (
+                      <div className="p-3 border-b border-slate-100">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Produk</p>
+                        {searchResults.products.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleSearchResultClick(item.type, item.id)}
+                            className="w-full text-left p-2 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-3"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                              {item.image ? (
+                                <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <span className="text-lg">📦</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 truncate">{item.name}</p>
+                              <p className="text-xs text-slate-400">{item.sku} • Stok: {item.current_stock}</p>
+                            </div>
+                            <p className="text-xs font-bold text-blue-600">{formatRupiah(item.sale_price)}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Services */}
+                    {searchResults.services.length > 0 && (
+                      <div className="p-3 border-b border-slate-100">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Jasa</p>
+                        {searchResults.services.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleSearchResultClick(item.type, item.id)}
+                            className="w-full text-left p-2 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-3"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                              <span className="text-lg">🛠️</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 truncate">{item.name}</p>
+                              <p className="text-xs text-slate-400 truncate">{item.description}</p>
+                            </div>
+                            <p className="text-xs font-bold text-blue-600">{formatRupiah(item.sale_price)}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Customers */}
+                    {searchResults.customers.length > 0 && (
+                      <div className="p-3 border-b border-slate-100">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Pelanggan</p>
+                        {searchResults.customers.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleSearchResultClick(item.type, item.id)}
+                            className="w-full text-left p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                          >
+                            <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                            <p className="text-xs text-slate-400">{item.phone}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Sales */}
+                    {searchResults.sales.length > 0 && (
+                      <div className="p-3">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Transaksi</p>
+                        {searchResults.sales.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleSearchResultClick(item.type, item.id)}
+                            className="w-full text-left p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                          >
+                            <p className="text-sm font-semibold text-slate-800">{item.sale_code}</p>
+                            <p className="text-xs text-slate-400">
+                              {item.customer_name || "Guest"} • {formatRupiah(item.grand_total)}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Loading indicator */}
+                {searchLoading && (
+                  <div className="absolute top-full mt-2 w-96 bg-white rounded-xl border border-slate-200 shadow-xl p-4 text-center z-50">
+                    <p className="text-sm text-slate-400">Mencari...</p>
+                  </div>
+                )}
+
+                {/* Error message */}
+                {searchOpen && searchError && !searchLoading && (
+                  <div className="absolute top-full mt-2 w-96 bg-white rounded-xl border border-red-200 shadow-xl p-4 text-center z-50">
+                    <p className="text-sm text-red-600">{searchError}</p>
+                  </div>
+                )}
+
+                {/* No results */}
+                {searchOpen && searchResults && searchResults.total === 0 && !searchLoading && !searchError && (
+                  <div className="absolute top-full mt-2 w-96 bg-white rounded-xl border border-slate-200 shadow-xl p-4 text-center z-50">
+                    <p className="text-sm text-slate-400">Tidak ada hasil ditemukan</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Notification Bell */}
               <NotificationBell />
             </div>
           </header>
