@@ -223,11 +223,11 @@ export function SalesHistoryPage() {
               Cetak Struk
             </Button>
           )}
-          {isAdmin && r.status === "PAID" && (
+          {(isAdmin && r.status === "PAID") || (!isAdmin && (r.status === "DRAFT" || r.status === "PENDING")) ? (
             <Button variant="danger" size="sm" onClick={() => openVoid(r)}>
               Void
             </Button>
-          )}
+          ) : null}
         </div>
       ),
     },
@@ -332,7 +332,7 @@ export function SalesHistoryPage() {
                         Cetak
                       </Button>
                     )}
-                    {isAdmin && s.status === "PAID" && (
+                    {(isAdmin && s.status === "PAID") || (!isAdmin && (s.status === "DRAFT" || s.status === "PENDING")) ? (
                       <Button
                         variant="danger"
                         size="sm"
@@ -340,7 +340,7 @@ export function SalesHistoryPage() {
                       >
                         Void
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -489,6 +489,14 @@ export function SalesHistoryPage() {
                 )}
               </div>
             )}
+
+            {(detail.status === "DRAFT" || detail.status === "PENDING") && !isAdmin && (
+              <div className="flex justify-end">
+                <Button variant="danger" onClick={() => openVoid(detail)}>
+                  Void Transaksi
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -496,7 +504,11 @@ export function SalesHistoryPage() {
       <ConfirmDialog
         open={!!voidTarget}
         title={`Void Transaksi ${voidTarget?.sale_code ?? ""}?`}
-        message="Stok sparepart dari transaksi ini akan dikembalikan. Tindakan ini tidak dapat dibatalkan."
+        message={
+          voidTarget?.status === "PAID"
+            ? "Stok sparepart dari transaksi ini akan dikembalikan. Tindakan ini tidak dapat dibatalkan."
+            : "Transaksi ini akan dibatalkan. Tindakan ini tidak dapat dibatalkan."
+        }
         confirmLabel="Void Transaksi"
         danger
         loading={voidLoading}
