@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Pagination } from "@/components/ui/Pagination";
 import { SaleStatusBadge } from "@/components/ui/badges";
+import { CountdownBadge } from "@/components/ui/CountdownBadge";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/app/auth/AuthContext";
 import {
@@ -77,6 +78,35 @@ export function SalesHistoryPage() {
   useEffect(() => {
     load();
   }, [load, page]);
+
+  // Client-side expiry check and auto-expire
+  const checkAndExpireTransactions = useCallback(async () => {
+    const now = Date.now();
+    const toExpire = data.filter(
+      (sale) =>
+        sale.status === "PENDING" &&
+        sale.payment_expires_at &&
+        new Date(sale.payment_expires_at).getTime() < now
+    );
+
+    for (const sale of toExpire) {
+      try {
+        await expireSaleApi(sale.id, "Waktu pembayaran habis (auto-client).");
+      } catch {
+        // Silent fail - cron job will handle it
+      }
+    }
+
+    if (toExpire.length > 0) {
+      load();
+    }
+  }, [data, load]);
+
+  // Periodic expiry check
+  useEffect(() => {
+    const interval = setInterval(checkAndExpireTransactions, 5000);
+    return () => clearInterval(interval);
+  }, [checkAndExpireTransactions]);
 
   // Real-time polling untuk status transaksi PENDING
   useEffect(() => {
@@ -199,7 +229,17 @@ export function SalesHistoryPage() {
     {
       key: "status",
       label: "Status",
-      render: (r) => <SaleStatusBadge status={r.status} />,
+      render: (r) => (
+        <div className="flex items-center gap-2">
+          <SaleStatusBadge status={r.status} />
+          {r.status === "PENDING" && r.payment_expires_at && (
+            <CountdownBadge 
+              expiresAt={r.payment_expires_at} 
+              onExpired={() => load()}
+            />
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",
@@ -303,7 +343,15 @@ export function SalesHistoryPage() {
                       {s.paid_at ? formatDateTime(s.paid_at) : "-"}
                     </p>
                   </div>
-                  <SaleStatusBadge status={s.status} />
+                  <div className="flex flex-col items-end gap-1">
+                    <SaleStatusBadge status={s.status} />
+                    {s.status === "PENDING" && s.payment_expires_at && (
+                      <CountdownBadge 
+                        expiresAt={s.payment_expires_at}
+                        onExpired={() => load()}
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
                   <div className="flex shrink-0 gap-1">
