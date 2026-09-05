@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WhatsAppChat extends Model
 {
@@ -31,9 +32,9 @@ class WhatsAppChat extends Model
         return $this->hasMany(WhatsAppMessage::class, 'chat_id');
     }
 
-    public function latestMessage(): HasMany
+    public function latestMessage(): HasOne
     {
-        return $this->messages()->one()->latestOfMany();
+        return $this->hasOne(WhatsAppMessage::class, 'chat_id')->latestOfMany();
     }
 
     public function bookings(): HasMany

@@ -123,6 +123,17 @@ Route::prefix('v1')->group(function () {
         // Audit logs (Admin only)
         Route::get('audit-logs', [AuditController::class, 'index'])->middleware('role:ADMIN');
 
+        // WhatsApp Chat Management (Admin only)
+        Route::get('whatsapp/chats', [App\Http\Controllers\Api\WhatsAppChatController::class, 'index'])->middleware('role:ADMIN');
+        Route::get('whatsapp/chats/{chat}', [App\Http\Controllers\Api\WhatsAppChatController::class, 'show'])->middleware('role:ADMIN');
+        Route::post('whatsapp/chats/{chat}/takeover', [App\Http\Controllers\Api\WhatsAppChatController::class, 'takeover'])->middleware('role:ADMIN');
+        Route::post('whatsapp/chats/{chat}/release', [App\Http\Controllers\Api\WhatsAppChatController::class, 'release'])->middleware('role:ADMIN');
+        Route::post('whatsapp/chats/{chat}/send', [App\Http\Controllers\Api\WhatsAppChatController::class, 'sendMessage'])->middleware('role:ADMIN');
+
+        // Booking Approval (Admin only)
+        Route::post('whatsapp/bookings/{booking}/approve', [App\Http\Controllers\Api\WhatsAppBookingController::class, 'approve'])->middleware('role:ADMIN');
+        Route::post('whatsapp/bookings/{booking}/reject', [App\Http\Controllers\Api\WhatsAppBookingController::class, 'reject'])->middleware('role:ADMIN');
+
         // Notifications
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);

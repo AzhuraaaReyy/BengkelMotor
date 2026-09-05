@@ -17,10 +17,10 @@ class SendWhatsAppMessage implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        private string $phoneNumber,
-        private string $message,
-        private int $chatId,
-        private string $senderType = 'admin',
+        public string $phoneNumber,
+        public string $message,
+        public int $chatId,
+        public string $senderType = 'admin',
     ) {}
 
     public function handle(WhatsAppService $whatsapp): void
