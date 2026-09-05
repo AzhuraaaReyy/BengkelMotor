@@ -40,13 +40,15 @@ class ProcessIncomingWhatsAppMessage implements ShouldQueue
             'last_message_from' => 'customer',
         ]);
 
-        WhatsAppMessage::create([
+        $message = WhatsAppMessage::create([
             'chat_id' => $chat->id,
             'direction' => 'inbound',
             'sender_type' => 'customer',
             'message_text' => $this->message,
             'meta_message_id' => $this->metaMessageId,
         ]);
+
+        broadcast(new \App\Events\WhatsApp\NewWhatsAppMessage($message))->toOthers();
 
         if ($chat->admin_takeover) {
             return;

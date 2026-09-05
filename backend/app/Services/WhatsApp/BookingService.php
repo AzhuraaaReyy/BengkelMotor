@@ -81,6 +81,8 @@ class BookingService
             );
         }
 
+        broadcast(new \App\Events\WhatsApp\NewWhatsAppBooking($booking))->toOthers();
+
         return $booking;
     }
 
