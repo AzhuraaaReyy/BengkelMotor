@@ -30,6 +30,11 @@ Route::prefix('v1')->group(function () {
     Route::post('payments/webhook/midtrans', [PaymentWebhookController::class, 'handle'])
         ->middleware('throttle:30,1');
 
+    // WhatsApp Webhook (public, rate-limited, CSRF-exempt)
+    Route::get('whatsapp/webhook', [App\Http\Controllers\Api\WhatsAppWebhookController::class, 'verify']);
+    Route::post('whatsapp/webhook', [App\Http\Controllers\Api\WhatsAppWebhookController::class, 'handle'])
+        ->middleware('throttle:60,1');
+
     // Payment simulation (development only)
     Route::post('payments/simulate/{saleCode}', [PaymentWebhookController::class, 'simulatePayment'])
         ->middleware('throttle:10,1');
