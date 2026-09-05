@@ -13,10 +13,25 @@ class WhatsAppChatFactory extends Factory
     {
         return [
             'phone_number' => '628' . fake()->numerify('#########'),
-            'last_message_at' => now(),
-            'last_message_from' => 'customer',
+            'last_message_at' => now()->subMinutes(rand(1, 60)),
+            'last_message_from' => fake()->randomElement(['customer', 'admin', 'bot']),
             'bot_active' => false,
             'admin_takeover' => false,
         ];
+    }
+
+    public function botActive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'bot_active' => true,
+        ]);
+    }
+
+    public function adminTakeover(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'admin_takeover' => true,
+            'bot_active' => false,
+        ]);
     }
 }

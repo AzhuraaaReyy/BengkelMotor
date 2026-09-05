@@ -15,10 +15,26 @@ class WhatsAppMessageFactory extends Factory
         return [
             'chat_id' => WhatsAppChat::factory(),
             'direction' => fake()->randomElement(['inbound', 'outbound']),
-            'sender_type' => fake()->randomElement(['customer', 'bot', 'admin']),
+            'sender_type' => fake()->randomElement(['customer', 'admin', 'bot']),
             'message_text' => fake()->sentence(),
             'event_type' => null,
-            'meta_message_id' => null,
+            'meta_message_id' => 'wamid.' . fake()->uuid(),
         ];
+    }
+
+    public function inbound(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'direction' => 'inbound',
+            'sender_type' => 'customer',
+        ]);
+    }
+
+    public function outbound(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'direction' => 'outbound',
+            'sender_type' => fake()->randomElement(['admin', 'bot']),
+        ]);
     }
 }
