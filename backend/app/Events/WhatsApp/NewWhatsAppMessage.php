@@ -3,8 +3,8 @@
 namespace App\Events\WhatsApp;
 
 use App\Models\WhatsAppMessage;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -17,9 +17,9 @@ class NewWhatsAppMessage implements ShouldBroadcast
         public WhatsAppMessage $message,
     ) {}
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel
     {
-        return new Channel('whatsapp-chats');
+        return new PrivateChannel('whatsapp-chats');
     }
 
     public function broadcastWith(): array

@@ -50,7 +50,7 @@ export function WhatsAppChatsPage() {
   }, [statusFilter]);
 
   useEffect(() => {
-    echo.channel('whatsapp-chats')
+    echo.private('whatsapp-chats')
       .listen('.App\\Events\\WhatsApp\\NewWhatsAppMessage', (data: { chat_id: number }) => {
         if (selectedChat && data.chat_id === selectedChat.id) {
           fetchChatDetail(selectedChat.id);
@@ -67,7 +67,7 @@ export function WhatsAppChatsPage() {
       });
 
     return () => {
-      echo.leaveChannel('whatsapp-chats');
+      echo.leave('whatsapp-chats');
     };
   }, [selectedChat?.id]);
 

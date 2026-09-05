@@ -78,21 +78,21 @@ class ChatManagementTest extends TestCase
         $this->assertFalse($chat->bot_active);
     }
 
-    public function test_admin_can_send_message(): void
-    {
-        $admin = User::factory()->admin()->create();
-        $chat = WhatsAppChat::factory()->create(['phone_number' => '628123456789']);
-        Queue::fake();
+public function test_admin_can_send_message(): void
+        {
+            $admin = User::factory()->admin()->create();
+            $chat = WhatsAppChat::factory()->create(['phone_number' => '628123456789']);
+            Queue::fake();
 
-        $response = $this->actingAs($admin)->postJson("/api/v1/whatsapp/chats/{$chat->id}/send", [
-            'message' => 'Hello from admin',
-        ]);
+            $response = $this->actingAs($admin)->postJson("/api/v1/whatsapp/chats/{$chat->id}/send", [
+                'message' => 'Hello from admin',
+            ]);
 
-        $response->assertOk();
-        Queue::assertPushed(\App\Jobs\WhatsApp\SendWhatsAppMessage::class, function ($job) {
-            return $job->phoneNumber === '628123456789';
-        });
-    }
+            $response->assertOk();
+            Queue::assertPushed(\App\Jobs\WhatsApp\SendWhatsAppMessage::class, function ($job) use ($chat) {
+                return $job->chatId() === $chat->id && $job->senderType() === 'admin';
+            });
+        }
 
     public function test_send_message_validates_message_field(): void
     {

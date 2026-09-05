@@ -19,6 +19,11 @@ export const echo = new Echo<'reverb'>({
   forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
   enabledTransports: ['ws', 'wss'],
   disableStats: true,
+  auth: {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('auth_token') || ''}`,
+    },
+  },
 });
 
 window.Echo = echo;
