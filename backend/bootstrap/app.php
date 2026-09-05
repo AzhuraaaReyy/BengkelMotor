@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'api/v1/payments/webhook/*',
+            'api/v1/whatsapp/webhook',
         ]);
 
         $middleware->api(prepend: [
