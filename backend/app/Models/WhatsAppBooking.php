@@ -10,6 +10,8 @@ class WhatsAppBooking extends Model
 {
     use HasFactory;
 
+    protected $table = 'whatsapp_bookings';
+
     protected $fillable = [
         'chat_id',
         'customer_name',

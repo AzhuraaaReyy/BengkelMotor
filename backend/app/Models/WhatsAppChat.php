@@ -10,6 +10,8 @@ class WhatsAppChat extends Model
 {
     use HasFactory;
 
+    protected $table = 'whatsapp_chats';
+
     protected $fillable = [
         'phone_number',
         'last_message_at',
